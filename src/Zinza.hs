@@ -82,7 +82,7 @@ module Zinza (
     -- * Types
     -- | Zinza's type-system is delibarately extremely simple.
     Ty (..),
-    prettyTy,
+    displayTy,
     -- * Values
     -- | 'Value's are passed at run-time, when the template is interpreted.
     -- When compiled to the Haskell module, 'Value's aren't used.
@@ -94,6 +94,8 @@ module Zinza (
     RuntimeError (..),
     AsRuntimeError (..),
     ThrowRuntime (..),
+    -- * Location
+    Loc (..), Located (..), displayLoc,
     -- * Variables
     Var, Selector,
     ) where
@@ -104,6 +106,7 @@ import Zinza.Expr
 import Zinza.Generic
 import Zinza.Node
 import Zinza.Parser
+import Zinza.Pos
 import Zinza.Type
 import Zinza.Value
 import Zinza.Var

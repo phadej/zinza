@@ -25,7 +25,7 @@ check nodes = case toType (Proxy :: Proxy a) of
         nodes' <- flip (traverse . traverseWithLoc) nodes $ \(L loc var) ->
             case M.lookup var env of
                 Nothing -> Left (UnboundTopLevelVar loc var)
-                Just _  -> Right (EField (EVar (L zeroLoc (Identity rootTy))) var)
+                Just _  -> Right (EField (EVar (L loc (Identity rootTy))) (L loc var))
 
         run <- check1 (map (>>== id) nodes')
         return $ fmap ($ "") . run . Identity . toValue
@@ -93,15 +93,15 @@ checkType (EVar (L _ i)) = return (\v -> return (fst (index v i)), extract i)
 checkType (ENot b) = do
     b' <- checkBool b
     return (fmap (VBool . not) . b', TyBool)
-checkType (EField e n) = do
+checkType (EField e (L nameLoc name)) = do
     (e', ty) <- checkType e
     case ty of
-        TyRecord tym -> case M.lookup n tym of
+        TyRecord tym -> case M.lookup name tym of
             Just (_sel, tyf) -> return (e' >=> go, tyf)
-            Nothing          -> throwRuntime (FieldNotInRecord n)
+            Nothing          -> throwRuntime (FieldNotInRecord nameLoc name ty)
         _ -> throwRuntime NotRecord
   where
-    go (VRecord r) = case M.lookup n r of
-        Just x  -> return x
-        Nothing -> throwRuntime (FieldNotInRecord n)
+    go x@(VRecord r) = case M.lookup name r of
+        Just y  -> return y
+        Nothing -> throwRuntime (FieldNotInRecord nameLoc name (valueType x))
     go _ = throwRuntime NotRecord

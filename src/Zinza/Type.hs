@@ -1,6 +1,7 @@
 module Zinza.Type (
     Ty (..),
-    prettyTy,
+    tyUnit,
+    displayTy,
     ) where
 
 import qualified Data.Map as M
@@ -15,9 +16,13 @@ data Ty
     | TyRecord (M.Map Var (Selector, Ty))    -- ^ records
   deriving (Eq, Ord, Show)
 
+-- | A record without fields is a unit type. Think of zero-field tuple: @()@.
+tyUnit :: Ty
+tyUnit = TyRecord M.empty
+
 -- | Pretty print 'Ty'.
-prettyTy :: Ty -> String
-prettyTy ty = go ty "" where
+displayTy :: Ty -> String
+displayTy ty = go ty "" where
     go :: Ty -> ShowS
     go TyBool       = showString "Bool"
     go TyString     = showString "String"

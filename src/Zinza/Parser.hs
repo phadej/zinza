@@ -78,7 +78,7 @@ exprP :: Parser (Expr Var)
 exprP =  do
     b <- optional (char '!')
     v <- locVarP
-    vs <- many (char '.' *> varP)
+    vs <- many (char '.' *> locVarP)
     let expr = foldl EField (EVar v) vs
     return $
         if isJust b

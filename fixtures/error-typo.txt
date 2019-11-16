@@ -1,1 +1,1 @@
-ACompileError (UnboundTopLevelVar (Loc 2 15) "licens")
+Error at 2:15: unbound variable 'licens'

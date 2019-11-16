@@ -23,6 +23,7 @@ main = defaultMain $ testGroup "Zinza"
     , testGroup "Golden"
         [ testGolden "licenses"
         , testGolden "error-typo"
+        , testGolden "error-field"
         ]
     ]
   where

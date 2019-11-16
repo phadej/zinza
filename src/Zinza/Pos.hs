@@ -9,6 +9,9 @@ data Loc = Loc !Int !Int
 zeroLoc :: Loc
 zeroLoc = Loc 0 0
 
+displayLoc :: Loc -> String
+displayLoc (Loc l c) = show l ++ ":" ++ show c
+
 data Located a = L {-# UNPACK #-} !Loc a
   deriving (Eq, Show, Functor, Foldable, Traversable)
 

@@ -21,7 +21,7 @@ import Zinza.Value
 --
 -- >>> data R = R { recFoo :: String, recBar :: Char } deriving Generic
 -- >>> instance Zinza R where toType = genericToTypeSFP; toValue = genericToValueSFP
--- >>> prettyTy $ toType (Proxy :: Proxy R)
+-- >>> displayTy $ toType (Proxy :: Proxy R)
 -- "{bar: String, foo: String}"
 --
 class Zinza a where
@@ -34,7 +34,7 @@ class Zinza a where
     toValueList = VList . map toValue
 
 instance Zinza () where
-    toType _ = TyRecord mempty
+    toType _  = tyUnit
     toValue _ = VRecord mempty
 
 instance Zinza Bool where

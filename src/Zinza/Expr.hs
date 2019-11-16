@@ -21,9 +21,9 @@ import Zinza.Pos
 --
 -- Note: there are only eliminators; we cannot construct "bigger" expressions.
 data Expr a
-    = EVar (Located a)     -- ^ variable
-    | EField (Expr a) Var  -- ^ field accessor
-    | ENot (Expr a)        -- ^ negation
+    = EVar (Located a)               -- ^ variable
+    | EField (Expr a) (Located Var)  -- ^ field accessor
+    | ENot (Expr a)                  -- ^ negation
   deriving (Show, Functor, Foldable, Traversable)
 
 instance TraversableWithLoc Expr where
