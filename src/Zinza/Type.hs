@@ -36,11 +36,3 @@ displayTy ty = go ty "" where
             . showChar '}'
 
     showPair n t = showString n . showString ": " . go t
-
-data Path
-    = PRoot
-    | Path :! Int
-    | Path :. Var
-  deriving (Show)
-
-infixl 0 :!, :.

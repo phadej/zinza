@@ -1,12 +1,11 @@
 {-# LANGUAGE DeriveGeneric #-}
 module Main (main) where
 
-import Control.Exception (throwIO, displayException)
-import Data.Proxy        (Proxy (..))
+import Control.Exception (displayException, throwIO)
 import GHC.Generics      (Generic (..))
 import Test.Tasty        (defaultMain, testGroup)
-import Test.Tasty.HUnit  (testCase, (@?=))
 import Test.Tasty.Golden (goldenVsString)
+import Test.Tasty.HUnit  (testCase, (@?=))
 
 import qualified Data.ByteString.Lazy.Char8 as LBS8
 
@@ -24,6 +23,7 @@ main = defaultMain $ testGroup "Zinza"
         [ testGolden "licenses"
         , testGolden "error-typo"
         , testGolden "error-field"
+        , testGolden "error-string"
         ]
     ]
   where
@@ -49,7 +49,7 @@ example = do
     contents <- readFile "fixtures/licenses.zinza"
     -- this might fail
     run <- runEither $ parseAndCompileTemplate "" contents
-    -- this shouldn't fail (run-time errors are due bugs)
+    -- this shouldn't fail (run-time errors are due bugs in zinza)
     run $ Licenses
         [ License "Foo" (show "foo-1.0")
         , License "Bar" (show "bar-1.2")
@@ -72,5 +72,5 @@ data License = License
   deriving (Show, Generic)
 
 instance Zinza License where
-    toType  = genericToType  (stripFieldPrefix (Proxy :: Proxy License))
-    toValue = genericToValue (stripFieldPrefix (Proxy :: Proxy License))
+    toType  = genericToTypeSFP
+    toValue = genericToValueSFP

@@ -10,6 +10,7 @@ module Zinza.Generic (
     ) where
 
 import Data.Char    (isLower, toLower)
+import Data.Semigroup (Semigroup (..))
 import Data.Kind    (Type)
 import Data.List    (stripPrefix)
 import Data.Proxy   (Proxy (..))
@@ -82,7 +83,7 @@ instance (i ~ S, Selector c) => GFieldNamesProd (M1 i c f) where
 
 newtype CommonPrefix = CP { getCommonPrefix :: String }
 
-instance Semigroup CommonPrefix where
+instance Data.Semigroup.Semigroup CommonPrefix where
     CP a <> CP b = CP (commonPrefix a b)
 
 commonPrefix :: Eq a => [a] -> [a] -> [a]

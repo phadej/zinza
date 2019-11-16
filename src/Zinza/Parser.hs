@@ -39,10 +39,13 @@ toLoc p = Loc (sourceLine p) (sourceColumn p)
 varP :: Parser Var
 varP = (:) <$> satisfy isLower <*> many (satisfy isVarChar)
 
-locVarP :: Parser (Located Var)
-locVarP = do
+located :: Parser a -> Parser (Located a)
+located p = do
     pos <- getPosition
-    L (toLoc pos) <$> varP
+    L (toLoc pos) <$> p
+
+locVarP :: Parser (Located Var)
+locVarP = located varP
 
 isVarChar :: Char -> Bool
 isVarChar c = isAlphaNum c || c == '_'
@@ -69,20 +72,20 @@ exprNodeP :: Parser (Node Var)
 exprNodeP = do
     _ <- try (string "{{")
     spaces
-    expr <- exprP
+    expr <- located exprP
     spaces
     _ <- string "}}"
     return (NExpr expr)
 
 exprP :: Parser (Expr Var)
-exprP =  do
+exprP = do
     b <- optional (char '!')
-    v <- locVarP
+    v@(L l _) <- locVarP
     vs <- many (char '.' *> locVarP)
-    let expr = foldl EField (EVar v) vs
+    let expr = foldl (\e f -> EField (L l e) f) (EVar v) vs
     return $
         if isJust b
-        then ENot expr
+        then ENot (L l expr)
         else expr
 
 directiveP :: Parser (Node Var)
@@ -115,7 +118,7 @@ forP = do
     _ <- string "in"
     notFollowedBy $ satisfy isAlphaNum
     spaces1
-    expr <- exprP
+    expr <- located exprP
     spaces1
     close' on0
     ns <- nodesP
@@ -125,7 +128,7 @@ forP = do
 ifP :: Parser (Node Var)
 ifP = do
     on0 <- open "if"
-    expr <- exprP
+    expr <- located exprP
     spaces
     close' on0
     ns <- nodesP

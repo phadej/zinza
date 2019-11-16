@@ -13,6 +13,7 @@ copyright:          (c) 2019 Oleg Grenrus
 author:             Oleg.Grenrus <oleg.grenrus@iki.fi>
 homepage:           https://github.com/phadej/zinza
 bug-reports:        https://github.com/phadej/zinza/issues
+tested-with:        GHC ==8.2.2 || ==8.4.4 || ==8.6.5 || ==8.8.1
 extra-source-files:
   fixtures/*.zinza
   fixtures/*.txt
@@ -26,10 +27,10 @@ library
   hs-source-dirs:   src
   exposed-modules:  Zinza
   build-depends:
-    , base          ^>=4.11.0.0 || ^>=4.12.0.0 || ^>=4.13.0.0
-    , containers
-    , parsec
-    , transformers
+    , base          ^>=4.10.0.0 || ^>=4.11.0.0 || ^>=4.12.0.0 || ^>=4.13.0.0
+    , containers    ^>=0.5.10.2 || ^>=0.6.0.1
+    , parsec        ^>=3.1.13.0
+    , transformers  ^>=0.5.2.0
 
   other-modules:
     Zinza.Check
@@ -52,8 +53,8 @@ test-suite zinza-test
   main-is:          Tests.hs
   build-depends:
     , base
-    , bytestring
-    , tasty
-    , tasty-golden
-    , tasty-hunit
+    , bytestring    ^>=0.10.8.2
+    , tasty         ^>=1.2.3
+    , tasty-golden  ^>=2.3.2
+    , tasty-hunit   ^>=0.10.0.2
     , zinza

@@ -1,3 +1,5 @@
+Unbound variable:
+
 {% for license in licenses %}
 licenseName {{licens.con}} = {{license.name}}
 {% endfor %}

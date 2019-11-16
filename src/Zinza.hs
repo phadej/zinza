@@ -1,25 +1,73 @@
 -- |
 -- SPDX-Identifier-Id: GPL-2.0-or-later AND BSD-3-Clause
 --
--- Zinza - a small jinja-syntax-inspired template compiler.
+-- Zinza - a small jinja-syntax-inspired typed-template compiler.
 --
--- Zinza compiles a template into as Haskell module. The template arguments are
--- ordinary Haskell records. Type-safe (text) templates without Template
--- Haskell, but using a preprocessor.
+-- Zinza typechecks and compiles a template.
+-- We can compile either to Haskell function, or to verbatim Haskell module (planned).
 --
 -- Zinza is very minimalistic. Features are added when needed.
 --
--- == Examples
+-- == Example usage
 --
--- For an example see SPDX LicenseId module generation.
+-- Given a template
+--
+-- @
+-- {% for license in licenses %}
+-- licenseName {{license.con}} = {{license.name}}
+-- {% endfor %}
+-- @
+--
+-- and data definitions like:
+--
+-- @
+-- newtype Licenses = Licenses { licenses :: [License] }
+--   deriving (Generic)
+-- 
+-- data License = License
+--     { licenseCon  :: String
+--     , licenseName :: String
+--     }
+--   deriving (Generic)
+-- @
+--
+-- We can (generically) derive 'Zinza' instances for @Licenses@ and @License@
+--
+-- @
+-- instance 'Zinza' Licenses where
+--     'toType'  = 'genericToType'  id
+--     'toValue' = 'genericToValue' id
+-- 
+-- instance 'Zinza' License where
+--     'toType'  = 'genericToTypeSFP'
+--     'toValue' = 'genericToValueSFP'
+-- @
+--
+-- Then the example of run-time usage is
+--
+-- @
+-- example :: IO String
+-- example = do
+--     contents <- readFile "fixtures/licenses.zinza"
+--     -- this might fail
+--     run <- either throwIO return $ 'parseAndCompileTemplate' "" contents
+--     -- this shouldn't fail (run-time errors are due bugs in zinza)
+--     run $ Licenses
+--         [ License \"Foo" (show "foo-1.0")
+--         , License \"Bar" (show "bar-1.2")
+--         ]
+-- @
+--
+-- The result of running an @example@ is:
+--
+-- @
+-- licenseName Foo = "foo-1.0"
+-- licenseName Bar = "bar-1.2"
+-- @
 --
 -- == Executable usage
 --
--- @
--- ./zinza INPUT.tmpl OUTPUT.hs [--module-name=Template]
--- @
---
--- == Syntax
+-- TBW 
 --
 -- === Expressions
 --
@@ -53,18 +101,6 @@
 -- trailing new line feed is stripped. This way full-line control tags
 -- don't introduce new lines in the output.
 --
--- == Miscellanea
---
--- A plan is to iterate @zinza@ for some time in @Cabal@ code-base
--- and later release as a separate package.
---
--- Zinza could produce invalid Haskell code.
--- In some cases it could be smarter, or you can edit your template.
---
--- The license is @GPL-2.0-or-later@ with an exception
--- that the code embedded into a generate template is free of it.
--- I use @Bison-exception-2.2@ to indicate that.
---
 module Zinza (
     parseAndCompileTemplate,
     parseTemplate,
@@ -78,7 +114,7 @@ module Zinza (
     stripFieldPrefix,
     GZinzaType, GZinzaValue, GFieldNames,
     -- * Templates
-    Node (..), Nodes, Expr (..),
+    Node (..), Nodes, Expr (..), LExpr,
     -- * Types
     -- | Zinza's type-system is delibarately extremely simple.
     Ty (..),
@@ -95,7 +131,7 @@ module Zinza (
     AsRuntimeError (..),
     ThrowRuntime (..),
     -- * Location
-    Loc (..), Located (..), displayLoc,
+    Loc (..), Located (..), zeroLoc, displayLoc, TraversableWithLoc (..),
     -- * Variables
     Var, Selector,
     ) where

@@ -3,6 +3,7 @@
 {-# LANGUAGE DeriveTraversable #-}
 module Zinza.Expr (
     Expr (..),
+    LExpr,
     abstract1,
     instantiate1ret,
     ) where
@@ -21,25 +22,27 @@ import Zinza.Pos
 --
 -- Note: there are only eliminators; we cannot construct "bigger" expressions.
 data Expr a
-    = EVar (Located a)               -- ^ variable
-    | EField (Expr a) (Located Var)  -- ^ field accessor
-    | ENot (Expr a)                  -- ^ negation
+    = EVar (Located a)                -- ^ variable
+    | EField (LExpr a) (Located Var)  -- ^ field accessor
+    | ENot (LExpr a)                  -- ^ negation
   deriving (Show, Functor, Foldable, Traversable)
+
+-- | Located expression.
+type LExpr a = Located (Expr a)
 
 instance TraversableWithLoc Expr where
     traverseWithLoc f (EVar x@(L l _)) = EVar . L l <$> f x
-    traverseWithLoc f (EField e v) = EField
+    traverseWithLoc f (EField (L l e) v) = (\e' -> EField (L l e') v)
         <$> traverseWithLoc f e
-        <*> pure v
-    traverseWithLoc f (ENot e) = ENot <$> traverseWithLoc f e
+    traverseWithLoc f (ENot (L l e)) = ENot . L l <$> traverseWithLoc f e
 
 -- | 'Monad' instance gives substitution.
 instance Monad Expr where
     return = EVar . L zeroLoc
 
-    EVar (L _ x)     >>= k = k x
-    EField expr var  >>= k = EField (expr >>= k) var
-    ENot expr        >>= k = ENot (expr >>= k)
+    EVar (L _ x)           >>= k = k x
+    EField (L l expr) var  >>= k = EField (L l (expr >>= k)) var
+    ENot (L l expr)        >>= k = ENot (L l (expr >>= k))
 
 instance Applicative Expr where
     pure = return

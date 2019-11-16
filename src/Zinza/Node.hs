@@ -20,20 +20,21 @@ type Nodes a = [Node a]
 -- See materials on @bound@ library.
 --
 data Node a
-    = NRaw  String                          -- ^ raw text block
-    | NExpr (Expr a)                        -- ^ expression @expr : String@
-    | NIf   (Expr a) (Nodes a)              -- ^ conditional block, @expr : Bool@
-    | NFor  Var (Expr a) (Nodes (Maybe a))  -- ^ for loop, @expr : List a@
+    = NRaw  String                           -- ^ raw text block
+    | NExpr (LExpr a)                        -- ^ expression @expr : String@
+    | NIf   (LExpr a) (Nodes a)              -- ^ conditional block, @expr : Bool@
+    | NFor  Var (LExpr a) (Nodes (Maybe a))  -- ^ for loop, @expr : List a@
   deriving (Show, Functor, Foldable, Traversable)
 
 instance TraversableWithLoc Node where
     traverseWithLoc _ (NRaw s)   = pure (NRaw s)
-    traverseWithLoc f (NExpr e)  = NExpr <$> traverseWithLoc f e
+    traverseWithLoc f (NExpr e)  = NExpr
+        <$> traverse (traverseWithLoc f) e
     traverseWithLoc f (NIf e ns) = NIf
-        <$> traverseWithLoc f e
+        <$> traverse (traverseWithLoc f) e
         <*> traverse (traverseWithLoc f) ns
     traverseWithLoc f (NFor v e ns) = NFor v
-        <$> traverseWithLoc f e
+        <$> traverse (traverseWithLoc f) e
         <*> traverse (traverseWithLoc f') ns
       where
         f' (L _ Nothing)  = pure Nothing
@@ -41,7 +42,7 @@ instance TraversableWithLoc Node where
 
 -- | Substitution.
 (>>==) :: Node a -> (a -> Expr b) -> Node b
-NRaw s           >>== _ = NRaw s
-NExpr expr       >>== k = NExpr (expr >>= k)
-NIf expr ns      >>== k = NIf (expr >>= k) (map (>>== k) ns)
-NFor var expr ns >>== k = NFor var (expr >>= k) (map (>>== traverse k) ns)
+NRaw s                 >>== _ = NRaw s
+NExpr (L l expr)       >>== k = NExpr (L l (expr >>= k))
+NIf (L l expr) ns      >>== k = NIf (L l (expr >>= k)) (map (>>== k) ns)
+NFor var (L l expr) ns >>== k = NFor var (L l (expr >>= k)) (map (>>== traverse k) ns)

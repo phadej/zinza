@@ -53,19 +53,24 @@ instance Exception CompileOrParseError where
 -------------------------------------------------------------------------------
 
 data RuntimeError
-    = NotBool
-    | NotString
-    | NotRecord
-    | NotList
+    = NotBool Loc Ty
+    | NotString Loc Ty
+    | NotRecord Loc Ty
+    | NotList Loc Ty
     | FieldNotInRecord Loc Var Ty
   deriving Show
 
 instance Exception RuntimeError where
+    displayException (NotBool loc ty) = errorLoc loc $
+        "Not a bool " ++ displayTy ty
+    displayException (NotString loc ty) = errorLoc loc $
+        "Not a string " ++ displayTy ty
+    displayException (NotRecord loc ty) = errorLoc loc $
+        "Not a record " ++ displayTy ty
+    displayException (NotList loc ty) = errorLoc loc $
+        "Not a list " ++ displayTy ty
     displayException (FieldNotInRecord loc var ty) = errorLoc loc $
         "Field '" ++ var ++ "' isn't in a record of type " ++ displayTy ty
-
-    -- TODO
-    displayException e = show e
 
 -- | Class representing errors containing 'RuntimeError's.
 --

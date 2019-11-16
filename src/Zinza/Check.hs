@@ -25,12 +25,12 @@ check nodes = case toType (Proxy :: Proxy a) of
         nodes' <- flip (traverse . traverseWithLoc) nodes $ \(L loc var) ->
             case M.lookup var env of
                 Nothing -> Left (UnboundTopLevelVar loc var)
-                Just _  -> Right (EField (EVar (L loc (Identity rootTy))) (L loc var))
+                Just _  -> Right (EField (L loc (EVar (L loc (Identity rootTy)))) (L loc var))
 
         run <- check1 (map (>>== id) nodes')
         return $ fmap ($ "") . run . Identity . toValue
 
-    _ -> throwRuntime NotRecord
+    rootTy -> throwRuntime (NotRecord zeroLoc rootTy)
 
 check1
     :: (Indexing v i, ThrowRuntime m)
@@ -58,50 +58,50 @@ check2 (NFor _v expr nodes) = do
         pieces <- for xs $ \x -> nodes' (x ::: ctx)
         return $ foldr (.) id pieces
 
-checkList :: (Indexing v i, ThrowRuntime m) => Expr (i Ty) -> Either CompileError (v Value -> m [Value], Ty)
-checkList e = do
+checkList :: (Indexing v i, ThrowRuntime m) => LExpr (i Ty) -> Either CompileError (v Value -> m [Value], Ty)
+checkList e@(L l _) = do
     (e', ty) <- checkType e
     case ty of
         TyList ty' -> return (e' >=> go, ty')
-        _          -> throwRuntime NotList
+        _          -> throwRuntime (NotList l ty)
   where
     go (VList xs) = return xs
-    go _          = throwRuntime NotList
+    go x          = throwRuntime (NotList l (valueType x))
 
-checkBool :: (Indexing v i, ThrowRuntime m) => Expr (i Ty) -> Either CompileError (v Value -> m Bool)
-checkBool e = do
+checkBool :: (Indexing v i, ThrowRuntime m) => LExpr (i Ty) -> Either CompileError (v Value -> m Bool)
+checkBool e@(L l _) = do
     (e', ty) <- checkType e
     case ty of
         TyBool -> return (e' >=> go)
-        _      -> throwRuntime NotBool
+        _      -> throwRuntime (NotBool l ty)
   where
     go (VBool b) = return b
-    go _         = throwRuntime NotBool
+    go x         = throwRuntime (NotBool l (valueType x))
 
-checkString :: (Indexing v i, ThrowRuntime m) => Expr (i Ty) -> Either CompileError (v Value -> m String)
-checkString e = do
+checkString :: (Indexing v i, ThrowRuntime m) => LExpr (i Ty) -> Either CompileError (v Value -> m String)
+checkString e@(L l _) = do
     (e', ty) <- checkType e
     case ty of
         TyString -> return (e' >=> go)
-        _        -> throwRuntime NotString
+        _        -> throwRuntime (NotString l ty)
   where
     go (VString b) = return b
-    go _           = throwRuntime NotString
+    go x           = throwRuntime (NotString l (valueType x))
 
-checkType :: (Indexing v i, ThrowRuntime m) => Expr (i Ty) -> Either CompileError (v Value -> m Value, Ty)
-checkType (EVar (L _ i)) = return (\v -> return (fst (index v i)), extract i)
-checkType (ENot b) = do
+checkType :: (Indexing v i, ThrowRuntime m) => LExpr (i Ty) -> Either CompileError (v Value -> m Value, Ty)
+checkType (L _ (EVar (L _ i))) = return (\v -> return (fst (index v i)), extract i)
+checkType (L _ (ENot b)) = do
     b' <- checkBool b
     return (fmap (VBool . not) . b', TyBool)
-checkType (EField e (L nameLoc name)) = do
+checkType (L eLoc (EField e (L nameLoc name))) = do
     (e', ty) <- checkType e
     case ty of
         TyRecord tym -> case M.lookup name tym of
             Just (_sel, tyf) -> return (e' >=> go, tyf)
             Nothing          -> throwRuntime (FieldNotInRecord nameLoc name ty)
-        _ -> throwRuntime NotRecord
+        _ -> throwRuntime (NotRecord eLoc ty)
   where
     go x@(VRecord r) = case M.lookup name r of
         Just y  -> return y
         Nothing -> throwRuntime (FieldNotInRecord nameLoc name (valueType x))
-    go _ = throwRuntime NotRecord
+    go x = throwRuntime (NotRecord eLoc (valueType x))

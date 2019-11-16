@@ -1,4 +1,5 @@
 packages: .
+tests: True
 
 package zinza
   ghc-options: -Wall
