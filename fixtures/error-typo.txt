@@ -1,1 +1,1 @@
-ACompileError (UnboundTopLevelVar "licens")
+ACompileError (UnboundTopLevelVar (Loc 2 15) "licens")

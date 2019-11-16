@@ -5,14 +5,15 @@ import Control.Monad       (void, when)
 import Data.Char           (isAlphaNum, isLower)
 import Data.Maybe          (isJust)
 import Text.Parsec
-       (eof, getPosition, lookAhead, notFollowedBy, parse, satisfy,
-       sourceColumn, try)
+       (eof, getPosition, lookAhead, notFollowedBy, parse, satisfy, try)
 import Text.Parsec.Char    (char, space, spaces, string)
+import Text.Parsec.Pos     (SourcePos, sourceColumn, sourceLine)
 import Text.Parsec.String  (Parser)
 
 import Zinza.Errors
 import Zinza.Expr
 import Zinza.Node
+import Zinza.Pos
 import Zinza.Var
 
 -- | Parse template into nodes. No other than syntactic checks are performed.
@@ -25,11 +26,23 @@ parseTemplate input contents
     $ parse (nodesP <* eof) input contents
 
 -------------------------------------------------------------------------------
+-- Location
+-------------------------------------------------------------------------------
+
+toLoc :: SourcePos -> Loc
+toLoc p = Loc (sourceLine p) (sourceColumn p)
+
+-------------------------------------------------------------------------------
 -- Parser
 -------------------------------------------------------------------------------
 
 varP :: Parser Var
 varP = (:) <$> satisfy isLower <*> many (satisfy isVarChar)
+
+locVarP :: Parser (Located Var)
+locVarP = do
+    pos <- getPosition
+    L (toLoc pos) <$> varP
 
 isVarChar :: Char -> Bool
 isVarChar c = isAlphaNum c || c == '_'
@@ -64,7 +77,7 @@ exprNodeP = do
 exprP :: Parser (Expr Var)
 exprP =  do
     b <- optional (char '!')
-    v <- varP
+    v <- locVarP
     vs <- many (char '.' *> varP)
     let expr = foldl EField (EVar v) vs
     return $

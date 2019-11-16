@@ -1,4 +1,3 @@
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE ScopedTypeVariables    #-}
 {-# LANGUAGE UndecidableInstances   #-}
 module Zinza.Check where
@@ -15,6 +14,7 @@ import Zinza.Errors
 import Zinza.Expr
 import Zinza.Indexing
 import Zinza.Node
+import Zinza.Pos
 import Zinza.Type
 import Zinza.Value
 import Zinza.Var
@@ -22,9 +22,10 @@ import Zinza.Var
 check :: forall a m. (Zinza a, ThrowRuntime m) => Nodes Var -> Either CompileError (a -> m String)
 check nodes = case toType (Proxy :: Proxy a) of
     rootTy@(TyRecord env) -> do
-        nodes' <- flip (traverse . traverse) nodes $ \var -> case M.lookup var env of
-            Nothing -> Left (UnboundTopLevelVar var)
-            Just _  -> return (EField (EVar (Identity rootTy)) var)
+        nodes' <- flip (traverse . traverseWithLoc) nodes $ \(L loc var) ->
+            case M.lookup var env of
+                Nothing -> Left (UnboundTopLevelVar loc var)
+                Just _  -> Right (EField (EVar (L zeroLoc (Identity rootTy))) var)
 
         run <- check1 (map (>>== id) nodes')
         return $ fmap ($ "") . run . Identity . toValue
@@ -57,11 +58,6 @@ check2 (NFor _v expr nodes) = do
         pieces <- for xs $ \x -> nodes' (x ::: ctx)
         return $ foldr (.) id pieces
 
-{-
-        VList xs -> foldr (.) id <$> traverse nodes' xs
-        v        -> Left (ForArgumentNotList v)
--}
-
 checkList :: (Indexing v i, ThrowRuntime m) => Expr (i Ty) -> Either CompileError (v Value -> m [Value], Ty)
 checkList e = do
     (e', ty) <- checkType e
@@ -93,7 +89,7 @@ checkString e = do
     go _           = throwRuntime NotString
 
 checkType :: (Indexing v i, ThrowRuntime m) => Expr (i Ty) -> Either CompileError (v Value -> m Value, Ty)
-checkType (EVar i) = return (\v -> return (fst (index v i)), extract i)
+checkType (EVar (L _ i)) = return (\v -> return (fst (index v i)), extract i)
 checkType (ENot b) = do
     b' <- checkBool b
     return (fmap (VBool . not) . b', TyBool)
@@ -109,5 +105,3 @@ checkType (EField e n) = do
         Just x  -> return x
         Nothing -> throwRuntime (FieldNotInRecord n)
     go _ = throwRuntime NotRecord
-
-

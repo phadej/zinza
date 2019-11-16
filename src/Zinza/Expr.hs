@@ -11,6 +11,7 @@ import Control.Monad (ap)
 import Data.Maybe    (fromMaybe)
 
 import Zinza.Var
+import Zinza.Pos
 
 -------------------------------------------------------------------------------
 -- Node syntax
@@ -20,18 +21,25 @@ import Zinza.Var
 --
 -- Note: there are only eliminators; we cannot construct "bigger" expressions.
 data Expr a
-    = EVar a               -- ^ variable
+    = EVar (Located a)     -- ^ variable
     | EField (Expr a) Var  -- ^ field accessor
     | ENot (Expr a)        -- ^ negation
-  deriving (Eq, Show, Functor, Foldable, Traversable)
+  deriving (Show, Functor, Foldable, Traversable)
+
+instance TraversableWithLoc Expr where
+    traverseWithLoc f (EVar x@(L l _)) = EVar . L l <$> f x
+    traverseWithLoc f (EField e v) = EField
+        <$> traverseWithLoc f e
+        <*> pure v
+    traverseWithLoc f (ENot e) = ENot <$> traverseWithLoc f e
 
 -- | 'Monad' instance gives substitution.
 instance Monad Expr where
-    return = EVar
+    return = EVar . L zeroLoc
 
-    EVar x          >>= k = k x
-    EField expr var >>= k = EField (expr >>= k) var
-    ENot expr       >>= k = ENot (expr >>= k)
+    EVar (L _ x)     >>= k = k x
+    EField expr var  >>= k = EField (expr >>= k) var
+    ENot expr        >>= k = ENot (expr >>= k)
 
 instance Applicative Expr where
     pure = return

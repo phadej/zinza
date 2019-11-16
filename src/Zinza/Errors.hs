@@ -2,9 +2,8 @@ module Zinza.Errors where
 
 import Control.Exception (Exception (..), throwIO)
 
-import Zinza.Type
-import Zinza.Value
 import Zinza.Var
+import Zinza.Pos
 
 -------------------------------------------------------------------------------
 -- ParseError
@@ -21,7 +20,7 @@ instance Exception ParseError where
 -------------------------------------------------------------------------------
 
 data CompileError
-    = UnboundTopLevelVar Var
+    = UnboundTopLevelVar Loc Var
     | ARuntimeError RuntimeError
   deriving (Show)
 
