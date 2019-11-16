@@ -1,0 +1,4 @@
+packages: .
+
+package zinza
+  ghc-options: -Wall

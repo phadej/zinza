@@ -1,0 +1,3 @@
+{% for license in licenses %}
+licenseName {{license.con}} = {{license.name}}
+{% endfor %}
