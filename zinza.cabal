@@ -1,18 +1,21 @@
-cabal-version: 2.2
-name:          zinza
-version:       0.1
-synopsis:      Typed templates with jinja like syntax
-category:      Text, Template
+cabal-version:      2.2
+name:               zinza
+version:            0.1
+synopsis:           Typed templates with jinja like syntax
+category:           Text, Template
 description:
   Typed templates with jinja like syntax. Well-typed templates don't go wrong.
 
-license:       GPL-2.0-or-later
-license-file:  LICENSE
-maintainer:    Oleg Grenrus <oleg.grenrus@iki.fi>
-copyright:     (c) 2019 Oleg Grenrus
-author:        Oleg.Grenrus <oleg.grenrus@iki.fi>
-homepage:      https://github.com/phadej/zinza
-bug-reports:   https://github.com/phadej/zinza/issues
+license:            GPL-2.0-or-later
+license-file:       LICENSE
+maintainer:         Oleg Grenrus <oleg.grenrus@iki.fi>
+copyright:          (c) 2019 Oleg Grenrus
+author:             Oleg.Grenrus <oleg.grenrus@iki.fi>
+homepage:           https://github.com/phadej/zinza
+bug-reports:        https://github.com/phadej/zinza/issues
+extra-source-files:
+  fixtures/*.zinza
+  fixtures/*.txt
 
 source-repository head
   type:     git
@@ -49,6 +52,8 @@ test-suite zinza-test
   main-is:          Tests.hs
   build-depends:
     , base
+    , bytestring
     , tasty
+    , tasty-golden
     , tasty-hunit
     , zinza

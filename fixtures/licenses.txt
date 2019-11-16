@@ -1,0 +1,2 @@
+licenseName Foo = "foo-1.0"
+licenseName Bar = "bar-1.2"

@@ -94,6 +94,8 @@ module Zinza (
     RuntimeError (..),
     AsRuntimeError (..),
     ThrowRuntime (..),
+    -- * Variables
+    Var, Selector,
     ) where
 
 import Zinza.Check
