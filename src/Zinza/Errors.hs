@@ -2,9 +2,9 @@ module Zinza.Errors where
 
 import Control.Exception (Exception (..), throwIO)
 
-import Zinza.Var
 import Zinza.Type
 import Zinza.Value
+import Zinza.Var
 
 -------------------------------------------------------------------------------
 -- ParseError
@@ -22,16 +22,27 @@ instance Exception ParseError where
 
 data CompileError
     = UnboundTopLevelVar Var
-    | RuntimeError RuntimeError
+    | ARuntimeError RuntimeError
   deriving (Show)
 
 instance Exception CompileError
 
 -------------------------------------------------------------------------------
+-- CompileOrParseError
+-------------------------------------------------------------------------------
+
+data CompileOrParseError
+    = ACompileError CompileError
+    | AParseError ParseError
+  deriving (Show)
+
+instance Exception CompileOrParseError
+
+-------------------------------------------------------------------------------
 -- RuntimeError
 -------------------------------------------------------------------------------
 
-data RuntimeError 
+data RuntimeError
     = NotBool
     | NotString
     | NotRecord
@@ -41,9 +52,14 @@ data RuntimeError
 
 instance Exception RuntimeError
 
+-- | Class representing errors containing 'RuntimeError's.
+--
+-- Without bugs, compiled template should not throw any 'RuntimeError's,
+-- as they are prevented statically, i.e. reported already as 'CompileError's.
+--
 class    AsRuntimeError e where asRuntimeError :: RuntimeError -> e
 instance AsRuntimeError RuntimeError where asRuntimeError = id
-instance AsRuntimeError CompileError where asRuntimeError = RuntimeError
+instance AsRuntimeError CompileError where asRuntimeError = ARuntimeError
 
 class Monad m => ThrowRuntime m where
     throwRuntime ::  RuntimeError -> m a

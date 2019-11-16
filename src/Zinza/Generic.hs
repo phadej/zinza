@@ -1,39 +1,59 @@
-{-# LANGUAGE TypeOperators, FlexibleContexts, ScopedTypeVariables, TypeFamilies #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies        #-}
+{-# LANGUAGE TypeOperators       #-}
 module Zinza.Generic (
     Zinza (..),
-    stripFieldPrefix,
-    GZinzaType, genericToType,
-    GZinzaValue, genericToValue,
+    GFieldNames, stripFieldPrefix,
+    GZinzaType, genericToType, genericToTypeSFP,
+    GZinzaValue, genericToValue, genericToValueSFP,
     ) where
 
-import Data.Proxy (Proxy (..))
+import Data.Char    (isLower, toLower)
+import Data.Kind    (Type)
+import Data.List    (stripPrefix)
+import Data.Proxy   (Proxy (..))
 import GHC.Generics
-import Data.Kind (Type)
-import Data.Char (isLower, toLower)
-import Data.List (stripPrefix)
 
 import qualified Data.Map.Strict as M
 
-import Zinza.Value
-import Zinza.Var (Var)
-import Zinza.Type
 import Zinza.Class
+import Zinza.Type
+import Zinza.Value
+import Zinza.Var   (Var)
+
+-- $setup
+-- >>> :set -XDeriveGeneric
+-- >>> import Data.Proxy (Proxy (..))
 
 -------------------------------------------------------------------------------
 -- Field renamer
 -------------------------------------------------------------------------------
 
+-- | Field renamer which will automatically strip lowercase prefix from
+-- field names.
+--
+-- >>> data R = R { recFoo :: Int, recBar :: Char } deriving Generic
+-- >>> stripFieldPrefix (Proxy :: Proxy R) "recFoo"
+-- "foo"
+--
+-- If whole field is lower case, it's left intact
+--
+-- >>> newtype Wrapped = Wrap { unwrap :: String } deriving Generic
+-- >>> stripFieldPrefix (Proxy :: Proxy Wrapped) "unwrap"
+-- "unwrap"
+--
 stripFieldPrefix
     :: forall a. (Generic a, GFieldNames (Rep a))
     => Proxy a
     -> String -> String
 stripFieldPrefix _ = case fieldNames (Proxy :: Proxy (Rep a)) of
-    []            -> id
-    (fieldname:_) -> \fn -> case stripPrefix pfx fn of
+    []     -> id
+    (y:ys) -> \fn -> case stripPrefix pfx fn of
         Just (x:xs) -> toLower x : xs
         _           -> fn -- otherwise don't hcange
       where
-        (pfx, _) = span isLower fieldname
+        (pfx, _) = span isLower $ getCommonPrefix $ foldl (\cp z -> cp <> CP z) (CP y) ys
 
 class GFieldNames (f :: Type -> Type) where
     fieldNames :: Proxy f -> [String]
@@ -46,7 +66,7 @@ class GFieldNamesSum (f :: Type -> Type) where
 
 instance (i ~ C, GFieldNamesProd f) => GFieldNamesSum (M1 i c f ) where
     fieldNamesSum _ = fieldNamesProd (Proxy :: Proxy f)
-    
+
 class GFieldNamesProd (f :: Type -> Type) where
     fieldNamesProd :: Proxy f -> [String]
 
@@ -57,17 +77,40 @@ instance (i ~ S, Selector c) => GFieldNamesProd (M1 i c f) where
     fieldNamesProd _ = [selName (undefined :: M1 i c f ())]
 
 -------------------------------------------------------------------------------
+-- Common prefix
+-------------------------------------------------------------------------------
+
+newtype CommonPrefix = CP { getCommonPrefix :: String }
+
+instance Semigroup CommonPrefix where
+    CP a <> CP b = CP (commonPrefix a b)
+
+commonPrefix :: Eq a => [a] -> [a] -> [a]
+commonPrefix xs@[]  _      = xs
+commonPrefix _      ys@[]  = ys
+commonPrefix (x:xs) (y:ys)
+    | x == y    = x : commonPrefix xs ys
+    | otherwise = []
+
+-------------------------------------------------------------------------------
 -- Generic toType
 -------------------------------------------------------------------------------
 
+-- | Generically derive 'toType' function.
 genericToType
-    :: forall a. (Generic a, GZinzaType (Rep a)) 
+    :: forall a. (Generic a, GZinzaType (Rep a))
     => (String -> String)  -- ^ field renamer
     -> Proxy a -> Ty
 genericToType namer _ = TyRecord $ M.fromList
     [ (namer fn, (fn, ty))
     | (fn, ty) <- gtoType (Proxy :: Proxy (Rep a))
     ]
+
+-- | 'genericToType' with 'stripFieldPrefix'.
+genericToTypeSFP
+    :: forall a. (Generic a, GZinzaType (Rep a), GFieldNames (Rep a))
+    => Proxy a -> Ty
+genericToTypeSFP p = genericToType (stripFieldPrefix p) p
 
 class GZinzaType (f :: Type -> Type) where
     gtoType :: Proxy f -> [(String, Ty)]
@@ -80,7 +123,7 @@ class GZinzaTypeSum (f :: Type -> Type) where
 
 instance (i ~ C, GZinzaTypeProd f) => GZinzaTypeSum (M1 i c f ) where
     gtoTypeSum _ = gtoTypeProd (Proxy :: Proxy f)
-    
+
 class GZinzaTypeProd (f :: Type -> Type) where
     gtoTypeProd :: Proxy f -> [(String, Ty)]
 
@@ -92,7 +135,7 @@ instance (i ~ S, Selector c, GZinzaTypeLeaf f) => GZinzaTypeProd (M1 i c f) wher
 
 class GZinzaTypeLeaf (f :: Type -> Type) where
     gtoTypeLeaf :: Proxy f -> Ty
-    
+
 instance (i ~ R, Zinza a) => GZinzaTypeLeaf (K1 i a) where
     gtoTypeLeaf _ = toType (Proxy :: Proxy a)
 
@@ -100,14 +143,21 @@ instance (i ~ R, Zinza a) => GZinzaTypeLeaf (K1 i a) where
 -- Generic toValue
 -------------------------------------------------------------------------------
 
+-- | Generically derive 'toValue' function.
 genericToValue
-    :: forall a. (Generic a, GZinzaValue (Rep a)) 
+    :: forall a. (Generic a, GZinzaValue (Rep a))
     => (String -> String)  -- ^ field renamer
     -> a -> Value
 genericToValue namer x = VRecord $ M.fromList
     [ (namer fn, e)
     | (fn, e) <- gtoValue (from x)
     ]
+
+-- | 'genericToValue' with 'stripFieldPrefix'.
+genericToValueSFP
+    :: forall a. (Generic a, GZinzaValue (Rep a), GFieldNames (Rep a))
+    => a -> Value
+genericToValueSFP = genericToValue (stripFieldPrefix (Proxy :: Proxy a))
 
 class GZinzaValue (f :: Type -> Type) where
     gtoValue :: f () -> [(Var, Value)]

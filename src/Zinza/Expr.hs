@@ -1,6 +1,6 @@
-{-# LANGUAGE DeriveFoldable       #-}
-{-# LANGUAGE DeriveFunctor        #-}
-{-# LANGUAGE DeriveTraversable    #-}
+{-# LANGUAGE DeriveFoldable    #-}
+{-# LANGUAGE DeriveFunctor     #-}
+{-# LANGUAGE DeriveTraversable #-}
 module Zinza.Expr (
     Expr (..),
     abstract1,
@@ -8,7 +8,7 @@ module Zinza.Expr (
     ) where
 
 import Control.Monad (ap)
-import Data.Maybe (fromMaybe)
+import Data.Maybe    (fromMaybe)
 
 import Zinza.Var
 
@@ -16,14 +16,16 @@ import Zinza.Var
 -- Node syntax
 -------------------------------------------------------------------------------
 
--- | Expressions
+-- | Expressions in templates.
+--
+-- Note: there are only eliminators; we cannot construct "bigger" expressions.
 data Expr a
     = EVar a               -- ^ variable
     | EField (Expr a) Var  -- ^ field accessor
     | ENot (Expr a)        -- ^ negation
   deriving (Eq, Show, Functor, Foldable, Traversable)
 
--- | 'Monad' instances give substitution.
+-- | 'Monad' instance gives substitution.
 instance Monad Expr where
     return = EVar
 

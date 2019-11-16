@@ -1,22 +1,23 @@
-{-# LANGUAGE FunctionalDependencies, UndecidableInstances #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE ScopedTypeVariables    #-}
+{-# LANGUAGE UndecidableInstances   #-}
 module Zinza.Check where
 
-import Data.Proxy (Proxy (..))
-import Data.Traversable (for)
-import Control.Monad ((>=>))
+import Control.Monad         ((>=>))
 import Data.Functor.Identity (Identity (..))
+import Data.Proxy            (Proxy (..))
+import Data.Traversable      (for)
 
 import qualified Data.Map.Strict as M
 
 import Zinza.Class
-import Zinza.Expr
-import Zinza.Node
 import Zinza.Errors
+import Zinza.Expr
 import Zinza.Indexing
-import Zinza.Var
+import Zinza.Node
 import Zinza.Type
 import Zinza.Value
+import Zinza.Var
 
 check :: forall a m. (Zinza a, ThrowRuntime m) => Nodes Var -> Either CompileError (a -> m String)
 check nodes = case toType (Proxy :: Proxy a) of

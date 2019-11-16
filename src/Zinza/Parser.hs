@@ -1,20 +1,25 @@
 module Zinza.Parser (parseTemplate) where
 
-import Control.Applicative              (many, optional, some, (<|>))
-import Data.Maybe                       (isJust)
-import Control.Monad                    (void, when)
-import Data.Char                        (isAlphaNum, isLower)
+import Control.Applicative (many, optional, some, (<|>))
+import Control.Monad       (void, when)
+import Data.Char           (isAlphaNum, isLower)
+import Data.Maybe          (isJust)
 import Text.Parsec
-       (eof, getPosition, lookAhead, notFollowedBy, parse, satisfy, sourceColumn, try)
-import Text.Parsec.Char                 (char, space, spaces, string)
-import Text.Parsec.String               (Parser)
+       (eof, getPosition, lookAhead, notFollowedBy, parse, satisfy,
+       sourceColumn, try)
+import Text.Parsec.Char    (char, space, spaces, string)
+import Text.Parsec.String  (Parser)
 
+import Zinza.Errors
 import Zinza.Expr
 import Zinza.Node
-import Zinza.Errors
 import Zinza.Var
 
-parseTemplate :: FilePath -> String -> Either ParseError (Nodes Var)
+-- | Parse template into nodes. No other than syntactic checks are performed.
+parseTemplate
+    :: FilePath  -- ^ name of the template
+    -> String    -- ^ contents of the template
+    -> Either ParseError (Nodes Var)
 parseTemplate input contents
     = either (Left . ParseError . show) Right
     $ parse (nodesP <* eof) input contents

@@ -27,7 +27,7 @@
 -- {{ expression }}
 -- @
 --
--- Expression syntax has two structures
+-- Expression syntax has only two structures
 --
 -- * negated: @!foo@
 --
@@ -65,55 +65,56 @@
 -- that the code embedded into a generate template is free of it.
 -- I use @Bison-exception-2.2@ to indicate that.
 --
-
-{-# LANGUAGE ScopedTypeVariables  #-}
-{-# LANGUAGE UndecidableInstances #-}
-
-{-# LANGUAGE DeriveGeneric #-}
-module Zinza (example) where
-
-import Control.Exception (throwIO)
-import Data.Proxy (Proxy (..))
-import GHC.Generics (Generic (..))
+module Zinza (
+    parseAndCompileTemplate,
+    parseTemplate,
+    -- * Input class
+    Zinza (..),
+    -- ** Generic deriving
+    genericToType,
+    genericToValue,
+    genericToTypeSFP,
+    genericToValueSFP,
+    stripFieldPrefix,
+    GZinzaType, GZinzaValue, GFieldNames,
+    -- * Templates
+    Node (..), Nodes, Expr (..),
+    -- * Types
+    -- | Zinza's type-system is delibarately extremely simple.
+    Ty (..),
+    prettyTy,
+    -- * Values
+    -- | 'Value's are passed at run-time, when the template is interpreted.
+    -- When compiled to the Haskell module, 'Value's aren't used.
+    Value (..),
+    -- * Errors
+    ParseError (..),
+    CompileError (..),
+    CompileOrParseError (..),
+    RuntimeError (..),
+    AsRuntimeError (..),
+    ThrowRuntime (..),
+    ) where
 
 import Zinza.Check
+import Zinza.Errors
 import Zinza.Expr
+import Zinza.Generic
 import Zinza.Node
 import Zinza.Parser
 import Zinza.Type
+import Zinza.Value
 import Zinza.Var
-import Zinza.Generic
 
--------------------------------------------------------------------------------
--- Example
--------------------------------------------------------------------------------
-
-example :: IO ()
-example = do
-    contents <- readFile "fixtures/licenses.zinza"
-    nodes <- runEither $ parseTemplate "" contents
-    -- this might fail, type error
-    run <- runEither (check nodes)
-    -- this shouldn't fail (run-time errors are due bugs)
-    ss  <- run $ Licenses [License "Foo" "foo-1.0", License "Bar" "bar-1.2"]
-    putStrLn ss
-  where
-    runEither (Left err) = throwIO err
-    runEither (Right x)  = return x
-
-newtype Licenses = Licenses { licenses :: [License] }
-  deriving (Generic)
-
-instance Zinza Licenses where
-    toType  = genericToType  id
-    toValue = genericToValue id
-
-data License = License
-    { licenseCon  :: String
-    , licenseName :: String
-    }
-  deriving (Show, Generic)
-
-instance Zinza License where
-    toType  = genericToType  (stripFieldPrefix (Proxy :: Proxy License))
-    toValue = genericToValue (stripFieldPrefix (Proxy :: Proxy License))
+-- | Parse and compile the template.
+parseAndCompileTemplate
+    :: (Zinza a, ThrowRuntime m)
+    => FilePath  -- ^ name of the template
+    -> String    -- ^ contents of the template
+    -> Either CompileOrParseError (a -> m String)
+parseAndCompileTemplate name contents =
+    case parseTemplate name contents of
+        Left err    -> Left (AParseError err)
+        Right nodes -> case check nodes of
+            Left err' -> Left (ACompileError err')
+            Right res -> Right res

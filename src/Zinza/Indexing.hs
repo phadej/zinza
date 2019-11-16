@@ -1,4 +1,5 @@
-{-# LANGUAGE FunctionalDependencies, UndecidableInstances #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE UndecidableInstances   #-}
 module Zinza.Indexing where
 
 import Data.Functor.Identity (Identity (..))

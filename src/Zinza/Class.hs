@@ -7,7 +7,23 @@ import Data.Proxy (Proxy (..))
 
 import Zinza.Type
 import Zinza.Value
+--
+-- $setup
+-- >>> :set -XDeriveGeneric
+-- >>> import Data.Proxy (Proxy (..))
+-- >>> import GHC.Generics (Generic)
+-- >>> import Zinza
 
+-- | 'Zinza' class tells how to convert the type into template parameters,
+-- and their types.
+--
+-- Class can be auto-derived for product types.
+--
+-- >>> data R = R { recFoo :: String, recBar :: Char } deriving Generic
+-- >>> instance Zinza R where toType = genericToTypeSFP; toValue = genericToValueSFP
+-- >>> prettyTy $ toType (Proxy :: Proxy R)
+-- "{bar: String, foo: String}"
+--
 class Zinza a where
     toType     :: Proxy a -> Ty
     toTypeList :: Proxy a -> Ty
@@ -18,8 +34,8 @@ class Zinza a where
     toValueList = VList . map toValue
 
 instance Zinza () where
-    toType _ = TyUnit
-    toValue _ = VUnit
+    toType _ = TyRecord mempty
+    toValue _ = VRecord mempty
 
 instance Zinza Bool where
     toType _ = TyBool

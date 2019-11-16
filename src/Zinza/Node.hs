@@ -1,11 +1,16 @@
-{-# LANGUAGE DeriveFoldable       #-}
-{-# LANGUAGE DeriveFunctor        #-}
-{-# LANGUAGE DeriveTraversable    #-}
-module Zinza.Node where
+{-# LANGUAGE DeriveFoldable    #-}
+{-# LANGUAGE DeriveFunctor     #-}
+{-# LANGUAGE DeriveTraversable #-}
+module Zinza.Node (
+    Nodes,
+    Node (..),
+    (>>==),
+    ) where
 
 import Zinza.Expr
 import Zinza.Var
 
+-- | A list of 'Node's.
 type Nodes a = [Node a]
 
 -- | Template parts.
@@ -18,7 +23,6 @@ data Node a
     | NIf   (Expr a) (Nodes a)              -- ^ conditional block, @expr : Bool@
     | NFor  Var (Expr a) (Nodes (Maybe a))  -- ^ for loop, @expr : List a@
   deriving (Eq, Show, Functor, Foldable, Traversable)
-
 
 -- | Substitution.
 (>>==) :: Node a -> (a -> Expr b) -> Node b
