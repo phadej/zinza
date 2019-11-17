@@ -63,7 +63,7 @@ rawP :: Parser (Node Var)
 rawP = mk <$> some rawCharP <*> optional (char '\n') where
     rawCharP   = notBrace <|> try (char '{' <* lookAhead notSpecial)
     notBrace   = satisfy $ \c -> c /= '{' && c /= '\n'
-    notSpecial = satisfy $ \c -> c /= '{' && c /= '\n' && c /= '%'
+    notSpecial = satisfy $ \c -> c /= '{' && c /= '%'
 
     mk s Nothing  = NRaw s
     mk s (Just c) = NRaw (s ++ [c])

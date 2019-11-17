@@ -1,0 +1,4 @@
+int main() {
+  printf("Foo\n");
+  printf("Bar\n");
+}
