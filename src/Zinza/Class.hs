@@ -3,7 +3,12 @@ module Zinza.Class (
     Zinza (..),
     ) where
 
-import Data.Proxy (Proxy (..))
+import Data.Foldable (toList)
+import Data.Proxy    (Proxy (..))
+
+import qualified Data.List.NonEmpty as NE
+import qualified Data.Map.Lazy      as Map
+import qualified Data.Set           as Set
 
 import Zinza.Type
 import Zinza.Value
@@ -51,3 +56,37 @@ instance Zinza Char where
 instance Zinza a => Zinza [a] where
     toType _ = toTypeList (Proxy :: Proxy a)
     toValue = toValueList
+
+instance (Zinza a, Zinza b) => Zinza (a, b) where
+    toType _ = TyRecord $ Map.fromList
+        [ ("fst", ("fst", toType (Proxy :: Proxy a)))
+        , ("snd", ("snd", toType (Proxy :: Proxy b)))
+        ]
+
+    toValue (a, b) = VRecord $ Map.fromList
+        [ ("fst", toValue a)
+        , ("snd", toValue b)
+        ]
+
+-------------------------------------------------------------------------------
+-- semigroups
+-------------------------------------------------------------------------------
+
+instance Zinza a => Zinza (NE.NonEmpty a) where
+    toType _ = TyList (toType (Proxy :: Proxy a))
+    toValue  = VList . map toValue . toList
+
+-------------------------------------------------------------------------------
+-- containers
+-------------------------------------------------------------------------------
+
+instance Zinza a => Zinza (Set.Set a) where
+    toType _ = TyList (toType (Proxy :: Proxy a))
+    toValue  = VList . map toValue . toList
+
+{-
+-- | Pairs are encoded as @{key: k, val: v }@
+instance (Zinza k, Zinza v) => Zinza (Map.Map k v) where
+    toType _ = TyList (toType (Proxy :: Proxy v))
+    toValue  = VList . map toValue . toList
+-}
