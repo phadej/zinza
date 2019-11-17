@@ -103,6 +103,7 @@
 --
 module Zinza (
     parseAndCompileTemplate,
+    parseAndCompileTemplateIO,
     parseTemplate,
     -- * Input class
     Zinza (..),
@@ -136,6 +137,8 @@ module Zinza (
     Var, Selector,
     ) where
 
+import Control.Exception (throwIO)
+
 import Zinza.Check
 import Zinza.Errors
 import Zinza.Expr
@@ -159,3 +162,10 @@ parseAndCompileTemplate name contents =
         Right nodes -> case check nodes of
             Left err' -> Left (ACompileError err')
             Right res -> Right res
+
+-- | Like 'parseAndCompileTemplate' but reads file and (possibly)
+-- throws 'CompileOrParseError'.
+parseAndCompileTemplateIO :: (Zinza a, ThrowRuntime m) => FilePath -> IO (a -> m String)
+parseAndCompileTemplateIO name = do
+    contents <- readFile name
+    either throwIO return $ parseAndCompileTemplate name contents
