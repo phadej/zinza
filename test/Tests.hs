@@ -24,6 +24,7 @@ main = defaultMain $ testGroup "Zinza"
         , testGolden "error-typo"
         , testGolden "error-field"
         , testGolden "error-string"
+        , testGolden "regression-c"
         ]
     ]
   where
