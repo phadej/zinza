@@ -1,0 +1,3 @@
+fancy string
+bar -- Bar
+foo -- Foo

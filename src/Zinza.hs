@@ -105,6 +105,10 @@ module Zinza (
     parseAndCompileTemplate,
     parseAndCompileTemplateIO,
     parseTemplate,
+    -- * Compilation to Haskell module
+    parseAndCompileModule,
+    parseAndCompileModuleIO,
+    ModuleConfig (..),
     -- * Input class
     Zinza (..),
     -- ** Generic deriving
@@ -144,6 +148,7 @@ import Zinza.Errors
 import Zinza.Expr
 import Zinza.Generic
 import Zinza.Node
+import Zinza.Module
 import Zinza.Parser
 import Zinza.Pos
 import Zinza.Type
@@ -169,3 +174,23 @@ parseAndCompileTemplateIO :: (Zinza a, ThrowRuntime m) => FilePath -> IO (a -> m
 parseAndCompileTemplateIO name = do
     contents <- readFile name
     either throwIO return $ parseAndCompileTemplate name contents
+
+parseAndCompileModule
+    :: Zinza a
+    => ModuleConfig a
+    -> FilePath
+    -> String
+    -> Either CompileOrParseError String
+parseAndCompileModule mc name contents =
+    case parseTemplate name contents of
+        Left err -> Left (AParseError err)
+        Right nodes -> case checkModule mc nodes of
+            Left err  -> Left (ACompileError err)
+            Right res -> Right res
+
+-- | Like 'parseAndCompileModule' but reads file and (possibly)
+-- throws 'CompileOrParseError'.
+parseAndCompileModuleIO :: Zinza a => ModuleConfig a ->  FilePath -> IO String
+parseAndCompileModuleIO mc name = do
+    contents <- readFile name
+    either throwIO return $ parseAndCompileModule mc name contents
