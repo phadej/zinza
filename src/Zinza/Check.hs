@@ -62,8 +62,8 @@ checkList :: (Indexing v i, ThrowRuntime m) => LExpr (i Ty) -> Either CompileErr
 checkList e@(L l _) = do
     (e', ty) <- checkType e
     case ty of
-        TyList ty' -> return (e' >=> go, ty')
-        _          -> throwRuntime (NotList l ty)
+        TyList _ ty' -> return (e' >=> go, ty')
+        _            -> throwRuntime (NotList l ty)
   where
     go (VList xs) = return xs
     go x          = throwRuntime (NotList l (valueType x))

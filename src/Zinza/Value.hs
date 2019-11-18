@@ -19,6 +19,6 @@ data Value
 valueType :: Value -> Ty
 valueType (VBool _)     = TyBool
 valueType (VString _)   = TyString
-valueType (VList [])    = TyList tyUnit
-valueType (VList (v:_)) = TyList (valueType v)
+valueType (VList [])    = TyList Nothing tyUnit
+valueType (VList (v:_)) = TyList Nothing (valueType v)
 valueType (VRecord m)   = TyRecord (fmap (\v -> ("", valueType v)) m)

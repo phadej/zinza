@@ -12,7 +12,7 @@ import Zinza.Var
 data Ty
     = TyBool                                 -- ^ boolean
     | TyString                               -- ^ string
-    | TyList Ty                              -- ^ lists
+    | TyList (Maybe Selector) Ty             -- ^ lists
     | TyRecord (M.Map Var (Selector, Ty))    -- ^ records
   deriving (Eq, Ord, Show)
 
@@ -26,7 +26,7 @@ displayTy ty = go ty "" where
     go :: Ty -> ShowS
     go TyBool       = showString "Bool"
     go TyString     = showString "String"
-    go (TyList t)   = showChar '[' . go t . showChar ']'
+    go (TyList _ t) = showChar '[' . go t . showChar ']'
     go (TyRecord m) = case M.toList m of
         []            -> showString "{}"
         ((n,(_,t)) : nts) -> foldl
