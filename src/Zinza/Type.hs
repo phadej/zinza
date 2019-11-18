@@ -8,11 +8,24 @@ import qualified Data.Map as M
 
 import Zinza.Var
 
+-- $setup
+-- >>> import Zinza
+-- >>> import Data.Proxy (Proxy (..))
+
 -- | Zinza types.
+--
+-- The 'selector's tell how the Haskell value can be
+-- converted to primitive value. E.g.
+--
+-- >>> toType (Proxy :: Proxy Char)
+-- TyString (Just "return")
+--
+-- TBW
+--
 data Ty
     = TyBool                                 -- ^ boolean
-    | TyString                               -- ^ string
-    | TyList Ty                              -- ^ lists
+    | TyString (Maybe Selector)              -- ^ string
+    | TyList (Maybe Selector) Ty             -- ^ lists
     | TyRecord (M.Map Var (Selector, Ty))    -- ^ records
   deriving (Eq, Ord, Show)
 
@@ -25,8 +38,8 @@ displayTy :: Ty -> String
 displayTy ty = go ty "" where
     go :: Ty -> ShowS
     go TyBool       = showString "Bool"
-    go TyString     = showString "String"
-    go (TyList t)   = showChar '[' . go t . showChar ']'
+    go (TyString _) = showString "String"
+    go (TyList _ t) = showChar '[' . go t . showChar ']'
     go (TyRecord m) = case M.toList m of
         []            -> showString "{}"
         ((n,(_,t)) : nts) -> foldl

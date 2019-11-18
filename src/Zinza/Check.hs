@@ -1,6 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables    #-}
 {-# LANGUAGE UndecidableInstances   #-}
-module Zinza.Check where
+module Zinza.Check (check) where
 
 import Control.Monad         ((>=>))
 import Data.Functor.Identity (Identity (..))
@@ -19,6 +19,10 @@ import Zinza.Type
 import Zinza.Value
 import Zinza.Var
 
+-------------------------------------------------------------------------------
+-- Nodes
+-------------------------------------------------------------------------------
+
 check :: forall a m. (Zinza a, ThrowRuntime m) => Nodes Var -> Either CompileError (a -> m String)
 check nodes = case toType (Proxy :: Proxy a) of
     rootTy@(TyRecord env) -> do
@@ -27,43 +31,54 @@ check nodes = case toType (Proxy :: Proxy a) of
                 Nothing -> Left (UnboundTopLevelVar loc var)
                 Just _  -> Right (EField (L loc (EVar (L loc (Identity rootTy)))) (L loc var))
 
-        run <- check1 (map (>>== id) nodes')
+        run <- checkNodes (map (>>== id) nodes')
         return $ fmap ($ "") . run . Identity . toValue
 
     rootTy -> throwRuntime (NotRecord zeroLoc rootTy)
 
-check1
+checkNodes
     :: (Indexing v i, ThrowRuntime m)
     => Nodes (i Ty)  -- ^ nodes with root object
     -> Either CompileError (v Value -> m ShowS)
-check1 nodes = do
-    nodes' <- traverse check2 nodes
+checkNodes nodes = do
+    nodes' <- traverse checkNode nodes
     return $ \val -> do
         ss <- traverse ($ val) nodes'
         return (foldr (.) id ss)
 
-check2 :: (Indexing v i, ThrowRuntime m) => Node (i Ty) -> Either CompileError (v Value -> m ShowS)
-check2 (NRaw s) = return $ \_val -> return (showString s)
-check2 (NIf _ _) = return $ \_ -> return (showString "unimplemented if")
-check2 (NExpr e) = do
+checkNode :: (Indexing v i, ThrowRuntime m) => Node (i Ty) -> Either CompileError (v Value -> m ShowS)
+checkNode (NRaw s) = return $ \_val -> return (showString s)
+checkNode (NIf expr nodes) = do
+    b' <- checkBool expr
+    nodes' <- checkNodes nodes
+    return $ \ctx -> do
+        b'' <- b' ctx
+        if b''
+        then nodes' ctx
+        else return id
+checkNode (NExpr e) = do
     e' <- checkString e
     return $ \ctx -> do
         s <- e' ctx
         return $ showString s
-check2 (NFor _v expr nodes) = do
+checkNode (NFor _v expr nodes) = do
     (expr', ty) <- checkList expr
-    nodes' <- check1 (fmap (fmap (maybe (Here ty) There)) nodes)
+    nodes' <- checkNodes (fmap (fmap (maybe (Here ty) There)) nodes)
     return $ \ctx -> do
         xs <- expr' ctx
         pieces <- for xs $ \x -> nodes' (x ::: ctx)
         return $ foldr (.) id pieces
 
+-------------------------------------------------------------------------------
+-- Expressions
+-------------------------------------------------------------------------------
+
 checkList :: (Indexing v i, ThrowRuntime m) => LExpr (i Ty) -> Either CompileError (v Value -> m [Value], Ty)
 checkList e@(L l _) = do
     (e', ty) <- checkType e
     case ty of
-        TyList ty' -> return (e' >=> go, ty')
-        _          -> throwRuntime (NotList l ty)
+        TyList _ ty' -> return (e' >=> go, ty')
+        _            -> throwRuntime (NotList l ty)
   where
     go (VList xs) = return xs
     go x          = throwRuntime (NotList l (valueType x))
@@ -82,8 +97,8 @@ checkString :: (Indexing v i, ThrowRuntime m) => LExpr (i Ty) -> Either CompileE
 checkString e@(L l _) = do
     (e', ty) <- checkType e
     case ty of
-        TyString -> return (e' >=> go)
-        _        -> throwRuntime (NotString l ty)
+        TyString _ -> return (e' >=> go)
+        _          -> throwRuntime (NotString l ty)
   where
     go (VString b) = return b
     go x           = throwRuntime (NotString l (valueType x))

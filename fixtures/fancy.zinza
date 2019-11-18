@@ -1,0 +1,6 @@
+{{ string }}
+{% if boolA %}
+{% for kv in map %}
+{{ kv.key }} -- {{ kv.val }}
+{% endfor %}
+{% endif %}

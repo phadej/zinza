@@ -32,7 +32,7 @@ import Zinza.Value
 class Zinza a where
     toType     :: Proxy a -> Ty
     toTypeList :: Proxy a -> Ty
-    toTypeList = TyList . toType
+    toTypeList = TyList Nothing . toType
 
     toValue     :: a   -> Value
     toValueList :: [a] -> Value
@@ -47,8 +47,8 @@ instance Zinza Bool where
     toValue = VBool
 
 instance Zinza Char where
-    toType     _ = TyString
-    toTypeList _ = TyString
+    toType     _ = TyString (Just "return")
+    toTypeList _ = TyString Nothing
 
     toValue     = VString . return
     toValueList = VString
@@ -73,7 +73,7 @@ instance (Zinza a, Zinza b) => Zinza (a, b) where
 -------------------------------------------------------------------------------
 
 instance Zinza a => Zinza (NE.NonEmpty a) where
-    toType _ = TyList (toType (Proxy :: Proxy a))
+    toType _ = TyList Nothing (toType (Proxy :: Proxy a))
     toValue  = VList . map toValue . toList
 
 -------------------------------------------------------------------------------
@@ -81,12 +81,20 @@ instance Zinza a => Zinza (NE.NonEmpty a) where
 -------------------------------------------------------------------------------
 
 instance Zinza a => Zinza (Set.Set a) where
-    toType _ = TyList (toType (Proxy :: Proxy a))
+    toType _ = TyList Nothing (toType (Proxy :: Proxy a))
     toValue  = VList . map toValue . toList
 
-{-
 -- | Pairs are encoded as @{key: k, val: v }@
 instance (Zinza k, Zinza v) => Zinza (Map.Map k v) where
-    toType _ = TyList (toType (Proxy :: Proxy v))
-    toValue  = VList . map toValue . toList
--}
+    toType _ = TyList (Just "Map.toList") $ TyRecord $ Map.fromList
+        [ ("key", ("fst", toType (Proxy :: Proxy k)))
+        , ("val", ("snd", toType (Proxy :: Proxy v)))
+        ]
+
+    toValue m = VList
+        [ VRecord $ Map.fromList
+            [ ("key", toValue k)
+            , ("val", toValue v)
+            ]
+        | (k, v) <- Map.toList m
+        ]
