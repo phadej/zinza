@@ -141,7 +141,6 @@
 module Zinza (
     parseAndCompileTemplate,
     parseAndCompileTemplateIO,
-    parseTemplate,
     -- * Compilation to Haskell module
     parseAndCompileModule,
     parseAndCompileModuleIO,
