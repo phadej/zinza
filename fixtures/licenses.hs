@@ -1,7 +1,10 @@
-module Demo (render) where
-import Control.Monad (forM_, when)
-import Control.Monad.Writer (execWriter, tell)
+module DemoLicenses (render) where
+import Prelude (String, fst, snd, ($))
+import Control.Monad (forM_)
 import Licenses
+type Writer a = (String, a)
+tell :: String -> Writer (); tell x = (x, ())
+execWriter :: Writer a -> String; execWriter = fst
 render :: Licenses -> String
 render (z_root) = execWriter $ do
   forM_ (licenses $ z_root) $ \z_var0_license -> do

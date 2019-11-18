@@ -1,6 +1,12 @@
+{# First comment #}
 {{ string }}
 {% if boolA %}
+{# Second comment #}
 {% for kv in map %}
 {{ kv.key }} -- {{ kv.val }}
 {% endfor %}
+{% elif boolB %}
+Another output
+{% else %}
+Third branch
 {% endif %}

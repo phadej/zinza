@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 -- |
 -- SPDX-Identifier-Id: GPL-2.0-or-later AND BSD-3-Clause
 --
@@ -23,7 +24,7 @@
 -- @
 -- newtype Licenses = Licenses { licenses :: [License] }
 --   deriving (Generic)
--- 
+--
 -- data License = License
 --     { licenseCon  :: String
 --     , licenseName :: String
@@ -37,7 +38,7 @@
 -- instance 'Zinza' Licenses where
 --     'toType'  = 'genericToType'  id
 --     'toValue' = 'genericToValue' id
--- 
+--
 -- instance 'Zinza' License where
 --     'toType'  = 'genericToTypeSFP'
 --     'toValue' = 'genericToValueSFP'
@@ -48,9 +49,8 @@
 -- @
 -- example :: IO String
 -- example = do
---     contents <- readFile "fixtures/licenses.zinza"
---     -- this might fail
---     run <- either throwIO return $ 'parseAndCompileTemplate' "" contents
+--     -- this might fail, type errors!
+--     run <- 'parseAndCompileTemplateIO' "fixtures/licenses.zinza"
 --     -- this shouldn't fail (run-time errors are due bugs in zinza)
 --     run $ Licenses
 --         [ License \"Foo" (show "foo-1.0")
@@ -65,9 +65,36 @@
 -- licenseName Bar = "bar-1.2"
 -- @
 --
--- == Executable usage
+-- == Module generation
 --
--- TBW 
+-- Zinza also supports standalone module generation.
+--
+-- @
+-- 'parseAndCompileModuleIO' ('simpleConfig' \"DemoLicenses\" [\"Licenses\"] :: 'ModuleConfig' Licenses) "fixtures/licenses.zinza" >>= putStr
+-- @
+--
+-- prints a Haskell module source code:
+--
+-- @
+-- module DemoLicenses (render) where
+-- import Prelude (String, fst, snd, ($))
+-- import Control.Monad (forM_)
+-- import Licenses
+-- type Writer a = (String, a)
+-- tell :: String -> Writer (); tell x = (x, ())
+-- execWriter :: Writer a -> String; execWriter = fst
+-- render :: Licenses -> String
+-- render (z_root) = execWriter $ do
+--   forM_ (licenses $ z_root) $ \z_var0_license -> do
+--     tell "licenseName "
+--     tell (licenseCon $ z_var0_license)
+--     tell " = "
+--     tell (licenseName $ z_var0_license)
+--     tell "\n"
+-- @
+--
+-- which is not dependent on Zinza. You are free to use more efficient writer
+-- as well.
 --
 -- === Expressions
 --
@@ -94,6 +121,10 @@
 -- @
 -- {% if boolExpression %}
 -- ...
+-- {% elif anotherBoolExpression %}
+-- ...
+-- {% else %}
+-- ...
 -- {% endif %}
 -- @
 --
@@ -101,14 +132,20 @@
 -- trailing new line feed is stripped. This way full-line control tags
 -- don't introduce new lines in the output.
 --
+-- === Comments
+--
+-- @
+-- {\# Comments are omitted from the output #}
+-- @
+--
 module Zinza (
     parseAndCompileTemplate,
     parseAndCompileTemplateIO,
-    parseTemplate,
     -- * Compilation to Haskell module
     parseAndCompileModule,
     parseAndCompileModuleIO,
     ModuleConfig (..),
+    simpleConfig,
     -- * Input class
     Zinza (..),
     -- ** Generic deriving
@@ -142,13 +179,14 @@ module Zinza (
     ) where
 
 import Control.Exception (throwIO)
+import Data.Typeable     (Typeable, typeRep)
 
 import Zinza.Check
 import Zinza.Errors
 import Zinza.Expr
 import Zinza.Generic
-import Zinza.Node
 import Zinza.Module
+import Zinza.Node
 import Zinza.Parser
 import Zinza.Pos
 import Zinza.Type
@@ -190,7 +228,33 @@ parseAndCompileModule mc name contents =
 
 -- | Like 'parseAndCompileModule' but reads file and (possibly)
 -- throws 'CompileOrParseError'.
-parseAndCompileModuleIO :: Zinza a => ModuleConfig a ->  FilePath -> IO String
+parseAndCompileModuleIO :: Zinza a => ModuleConfig a -> FilePath -> IO String
 parseAndCompileModuleIO mc name = do
     contents <- readFile name
     either throwIO return $ parseAndCompileModule mc name contents
+
+-- | Simple configuration to use with 'parseAndCompileModule' or
+-- 'parseAndCompileModuleIO'.
+simpleConfig
+    :: forall a. Typeable a
+    => String    -- ^ module name
+    -> [String]  -- ^ imports
+    -> ModuleConfig a
+simpleConfig moduleName imports = ModuleConfig
+    { mcRender = "render"
+    , mcHeader =
+        [ "module " ++ moduleName ++ " (render) where"
+        , "import Prelude (String, fst, snd, ($))"
+        , "import Control.Monad (forM_)"
+        ] ++
+        [ "import " ++ i
+        | i <- imports
+        ] ++
+        [ "type Writer a = (String, a)"
+        , "tell :: String -> Writer (); tell x = (x, ())"
+        , "execWriter :: Writer a -> String; execWriter = fst"
+        , "render :: " ++ typeName ++ " -> String"
+        ]
+    }
+  where
+    typeName = show (typeRep ([] :: [a]))

@@ -26,7 +26,7 @@ import Zinza.Var
 check :: forall a m. (Zinza a, ThrowRuntime m) => Nodes Var -> Either CompileError (a -> m String)
 check nodes = case toType (Proxy :: Proxy a) of
     rootTy@(TyRecord env) -> do
-        nodes' <- flip (traverse . traverseWithLoc) nodes $ \(L loc var) ->
+        nodes' <- flip (traverse . traverseWithLoc) nodes $ \loc var ->
             case M.lookup var env of
                 Nothing -> Left (UnboundTopLevelVar loc var)
                 Just _  -> Right (EField (L loc (EVar (L loc (Identity rootTy)))) (L loc var))
@@ -47,15 +47,17 @@ checkNodes nodes = do
         return (foldr (.) id ss)
 
 checkNode :: (Indexing v i, ThrowRuntime m) => Node (i Ty) -> Either CompileError (v Value -> m ShowS)
+checkNode NComment = return $ \_val -> return id
 checkNode (NRaw s) = return $ \_val -> return (showString s)
-checkNode (NIf expr nodes) = do
+checkNode (NIf expr xs ys) = do
     b' <- checkBool expr
-    nodes' <- checkNodes nodes
+    xs' <- checkNodes xs
+    ys' <- checkNodes ys
     return $ \ctx -> do
         b'' <- b' ctx
         if b''
-        then nodes' ctx
-        else return id
+        then xs' ctx
+        else ys' ctx
 checkNode (NExpr e) = do
     e' <- checkString e
     return $ \ctx -> do

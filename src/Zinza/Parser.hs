@@ -1,11 +1,11 @@
 module Zinza.Parser (parseTemplate) where
 
 import Control.Applicative (many, optional, some, (<|>))
-import Control.Monad       (void, when)
+import Control.Monad       (void)
 import Data.Char           (isAlphaNum, isLower)
 import Data.Maybe          (isJust)
 import Text.Parsec
-       (eof, getPosition, lookAhead, notFollowedBy, parse, satisfy, try)
+       (eof, getPosition, lookAhead, notFollowedBy, parse, anyChar, satisfy, try)
 import Text.Parsec.Char    (char, space, spaces, string)
 import Text.Parsec.Pos     (SourcePos, sourceColumn, sourceLine)
 import Text.Parsec.String  (Parser)
@@ -51,7 +51,7 @@ isVarChar :: Char -> Bool
 isVarChar c = isAlphaNum c || c == '_'
 
 nodeP :: Parser (Node Var)
-nodeP = directiveP <|> exprNodeP <|> newlineN <|> rawP
+nodeP = commentP <|> directiveP <|> exprNodeP <|> newlineN <|> rawP
 
 nodesP :: Parser (Nodes Var)
 nodesP = many nodeP
@@ -63,7 +63,7 @@ rawP :: Parser (Node Var)
 rawP = mk <$> some rawCharP <*> optional (char '\n') where
     rawCharP   = notBrace <|> try (char '{' <* lookAhead notSpecial)
     notBrace   = satisfy $ \c -> c /= '{' && c /= '\n'
-    notSpecial = satisfy $ \c -> c /= '{' && c /= '%'
+    notSpecial = satisfy $ \c -> c /= '{' && c /= '%' && c /= '#'
 
     mk s Nothing  = NRaw s
     mk s (Just c) = NRaw (s ++ [c])
@@ -88,6 +88,26 @@ exprP = do
         then ENot (L l expr)
         else expr
 
+commentP :: Parser (Node var)
+commentP = do
+    pos <- getPosition
+    _ <- try (string "{#")
+    go pos
+  where
+    go pos = do
+        c <- anyChar
+        case c of
+            '#' -> do
+                c' <- anyChar
+                case c' of
+                    '}' -> NComment <$ eatNewlineWhen (sourceColumn pos == 1)
+                    _   -> go pos
+            _   -> go pos
+    
+eatNewlineWhen :: Bool -> Parser ()
+eatNewlineWhen False = return ()
+eatNewlineWhen True  = void (optional (char '\n'))
+
 directiveP :: Parser (Node Var)
 directiveP = forP <|> ifP
 
@@ -108,7 +128,7 @@ close n = do
 close' :: Bool -> Parser ()
 close' on0 = do
     _ <- string "%}"
-    when on0 $ void $ optional (char '\n')
+    eatNewlineWhen on0
 
 forP :: Parser (Node Var)
 forP = do
@@ -132,5 +152,25 @@ ifP = do
     spaces
     close' on0
     ns <- nodesP
-    close "if"
-    return $ NIf expr ns
+    closing (NIf expr ns)
+  where
+    closing mk = closeIf mk <|> elifP mk <|> elseP mk
+
+    closeIf mk = do
+        close "if"
+        return (mk [])
+
+    elseP mk = do
+        on0 <- open "else"
+        close' on0
+        ns <- nodesP
+        close "if"
+        return (mk ns)
+
+    elifP mk = do
+        on0 <- open "elif"
+        expr <- located exprP
+        spaces
+        close' on0
+        ns <- nodesP
+        closing (mk . pure . NIf expr ns)

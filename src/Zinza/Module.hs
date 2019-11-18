@@ -79,7 +79,7 @@ checkModule
     -> Either CompileError String
 checkModule mc nodes =  case toType (Proxy :: Proxy a) of
     TyRecord env -> do
-        nodes' <- flip (traverse .traverseWithLoc) nodes $ \(L loc var) ->
+        nodes' <- flip (traverse .traverseWithLoc) nodes $ \loc var ->
             case M.lookup var env of
                 Nothing        -> Left (UnboundTopLevelVar loc var)
                 Just (sel, ty) -> Right (rootExpr `access` sel, ty)
@@ -99,14 +99,18 @@ checkNodes :: Nodes (HsExpr, Ty) -> M ()
 checkNodes = traverse_ checkNode
 
 checkNode :: Node (HsExpr, Ty) -> M ()
+checkNode NComment = return ()
 checkNode (NRaw s) = tell $ "tell " ++ show s
 checkNode (NExpr expr) = do
     expr' <- lift $ checkString expr
     tell $ "tell " ++ displayHsExpr expr'
-checkNode (NIf expr nodes) = do
+checkNode (NIf expr xs ys) = do
     expr' <- lift $ checkBool expr
-    tell $ "when " ++ displayHsExpr expr' ++ " $ do"
-    indented $ checkNodes nodes
+    tell $ "if " ++ displayHsExpr expr'
+    tell "then do"
+    indented $ checkNodes xs
+    tell "else do"
+    indented $ checkNodes ys
 checkNode (NFor v expr nodes) = do
     v' <- newVar v
     (expr', ty) <- lift (checkList expr)
