@@ -21,4 +21,4 @@ data Located a = L {-# UNPACK #-} !Loc a
 
 -- | Some containers have location for each element.
 class Traversable t => TraversableWithLoc t where
-    traverseWithLoc :: Applicative f => (Located a -> f b) -> t a -> f (t b)
+    traverseWithLoc :: Applicative f => (Loc -> a -> f b) -> t a -> f (t b)

@@ -31,7 +31,7 @@ data Expr a
 type LExpr a = Located (Expr a)
 
 instance TraversableWithLoc Expr where
-    traverseWithLoc f (EVar x@(L l _)) = EVar . L l <$> f x
+    traverseWithLoc f (EVar (L l x)) = EVar . L l <$> f l x
     traverseWithLoc f (EField (L l e) v) = (\e' -> EField (L l e') v)
         <$> traverseWithLoc f e
     traverseWithLoc f (ENot (L l e)) = ENot . L l <$> traverseWithLoc f e

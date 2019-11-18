@@ -39,8 +39,8 @@ instance TraversableWithLoc Node where
         <$> traverse (traverseWithLoc f) e
         <*> traverse (traverseWithLoc f') ns
       where
-        f' (L _ Nothing)  = pure Nothing
-        f' (L l (Just x)) = Just <$> f (L l x)
+        f' _ Nothing  = pure Nothing
+        f' l (Just x) = Just <$> f l x
 
 -- | Substitution.
 (>>==) :: Node a -> (a -> Expr b) -> Node b

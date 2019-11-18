@@ -79,7 +79,7 @@ checkModule
     -> Either CompileError String
 checkModule mc nodes =  case toType (Proxy :: Proxy a) of
     TyRecord env -> do
-        nodes' <- flip (traverse .traverseWithLoc) nodes $ \(L loc var) ->
+        nodes' <- flip (traverse .traverseWithLoc) nodes $ \loc var ->
             case M.lookup var env of
                 Nothing        -> Left (UnboundTopLevelVar loc var)
                 Just (sel, ty) -> Right (rootExpr `access` sel, ty)

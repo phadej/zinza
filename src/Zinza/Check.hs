@@ -26,7 +26,7 @@ import Zinza.Var
 check :: forall a m. (Zinza a, ThrowRuntime m) => Nodes Var -> Either CompileError (a -> m String)
 check nodes = case toType (Proxy :: Proxy a) of
     rootTy@(TyRecord env) -> do
-        nodes' <- flip (traverse . traverseWithLoc) nodes $ \(L loc var) ->
+        nodes' <- flip (traverse . traverseWithLoc) nodes $ \loc var ->
             case M.lookup var env of
                 Nothing -> Left (UnboundTopLevelVar loc var)
                 Just _  -> Right (EField (L loc (EVar (L loc (Identity rootTy)))) (L loc var))
