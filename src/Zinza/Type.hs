@@ -20,7 +20,7 @@ import Zinza.Var
 -- >>> toType (Proxy :: Proxy Char)
 -- TyString (Just "return")
 --
--- TBW
+-- Here, 'return' converts 'Char' to 'String'.
 --
 data Ty
     = TyBool                                 -- ^ boolean

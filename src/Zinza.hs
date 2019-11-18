@@ -49,9 +49,8 @@
 -- @
 -- example :: IO String
 -- example = do
---     contents <- readFile "fixtures/licenses.zinza"
---     -- this might fail
---     run <- either throwIO return $ 'parseAndCompileTemplate' "" contents
+--     -- this might fail, type errors!
+--     run <- 'parseAndCompileTemplateIO' "fixtures/licenses.zinza"
 --     -- this shouldn't fail (run-time errors are due bugs in zinza)
 --     run $ Licenses
 --         [ License \"Foo" (show "foo-1.0")
@@ -66,9 +65,36 @@
 -- licenseName Bar = "bar-1.2"
 -- @
 --
--- == Executable usage
+-- == Module generation
 --
--- TBW
+-- Zinza also supports standalone module generation.
+--
+-- @
+-- 'parseAndCompileModuleIO' ('simpleConfig' \"DemoLicenses\" [\"Licenses\"] :: 'ModuleConfig' Licenses) "fixtures/licenses.zinza" >>= putStr
+-- @
+--
+-- prints a Haskell module source code:
+--
+-- @
+-- module DemoLicenses (render) where
+-- import Prelude (String, fst, snd, ($))
+-- import Control.Monad (forM_)
+-- import Licenses
+-- type Writer a = (String, a)
+-- tell :: String -> Writer (); tell x = (x, ())
+-- execWriter :: Writer a -> String; execWriter = fst
+-- render :: Licenses -> String
+-- render (z_root) = execWriter $ do
+--   forM_ (licenses $ z_root) $ \z_var0_license -> do
+--     tell "licenseName "
+--     tell (licenseCon $ z_var0_license)
+--     tell " = "
+--     tell (licenseName $ z_var0_license)
+--     tell "\n"
+-- @
+--
+-- which is not dependent on Zinza. You are free to use more efficient writer
+-- as well.
 --
 -- === Expressions
 --
@@ -109,7 +135,7 @@
 -- === Comments
 --
 -- @
--- {# Comments are omitted from the output #}
+-- {\# Comments are omitted from the output #}
 -- @
 --
 module Zinza (
@@ -203,7 +229,7 @@ parseAndCompileModule mc name contents =
 
 -- | Like 'parseAndCompileModule' but reads file and (possibly)
 -- throws 'CompileOrParseError'.
-parseAndCompileModuleIO :: Zinza a => ModuleConfig a ->  FilePath -> IO String
+parseAndCompileModuleIO :: Zinza a => ModuleConfig a -> FilePath -> IO String
 parseAndCompileModuleIO mc name = do
     contents <- readFile name
     either throwIO return $ parseAndCompileModule mc name contents
