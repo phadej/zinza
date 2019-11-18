@@ -45,6 +45,7 @@ library
     Zinza.Type
     Zinza.Value
     Zinza.Var
+    Zinza.Writer
 
 test-suite zinza-test
   default-language: Haskell2010
