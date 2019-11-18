@@ -47,6 +47,7 @@ checkNodes nodes = do
         return (foldr (.) id ss)
 
 checkNode :: (Indexing v i, ThrowRuntime m) => Node (i Ty) -> Either CompileError (v Value -> m ShowS)
+checkNode NComment = return $ \_val -> return id
 checkNode (NRaw s) = return $ \_val -> return (showString s)
 checkNode (NIf expr nodes) = do
     b' <- checkBool expr

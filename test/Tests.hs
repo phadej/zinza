@@ -2,7 +2,7 @@ module Main (main) where
 
 import Control.Exception (displayException, throwIO)
 import Test.Tasty        (TestName, TestTree, defaultMain, testGroup)
-import Test.Tasty.Golden (goldenVsString)
+import Test.Tasty.Golden (goldenVsStringDiff)
 import Test.Tasty.HUnit  (testCase, (@?=))
 
 import qualified Data.ByteString.Lazy.Char8 as LBS8
@@ -33,19 +33,22 @@ main = defaultMain $ testGroup "Zinza"
   where
     testGolden :: Zinza a => a -> ModuleConfig a -> TestName -> TestTree
     testGolden input mc name = testGroup name
-        [ goldenVsString "txt" ("fixtures/" ++ name ++ ".txt") $ do
+        [ goldenVsStringDiff "txt" diff ("fixtures/" ++ name ++ ".txt") $ do
             contents <- readFile $ "fixtures/" ++ name ++ ".zinza"
             case parseAndCompileTemplate "" contents of
                 Left err -> return (LBS8.pack (displayException err))
                 Right run -> case run input of
                     Left err  -> return (LBS8.pack (displayException (err :: RuntimeError)))
                     Right res -> return (LBS8.pack res)
-        , goldenVsString "module" ("fixtures/" ++ name ++ ".hs") $ do
+        , goldenVsStringDiff "module" diff ("fixtures/" ++ name ++ ".hs") $ do
             contents <- readFile $ "fixtures/" ++ name ++ ".zinza"
             case parseAndCompileModule mc "" contents of
                 Left err  -> return (LBS8.pack (displayException err))
                 Right mdl -> return (LBS8.pack mdl)
         ]
+
+    diff :: FilePath -> FilePath -> [String]
+    diff ref new = ["diff", "-u", ref, new]
 
 -------------------------------------------------------------------------------
 -- Licenses

@@ -99,6 +99,7 @@ checkNodes :: Nodes (HsExpr, Ty) -> M ()
 checkNodes = traverse_ checkNode
 
 checkNode :: Node (HsExpr, Ty) -> M ()
+checkNode NComment = return ()
 checkNode (NRaw s) = tell $ "tell " ++ show s
 checkNode (NExpr expr) = do
     expr' <- lift $ checkString expr

@@ -101,6 +101,12 @@
 -- trailing new line feed is stripped. This way full-line control tags
 -- don't introduce new lines in the output.
 --
+-- === Comments
+--
+-- @
+-- {# Comments are omitted from the output #}
+-- @
+--
 module Zinza (
     parseAndCompileTemplate,
     parseAndCompileTemplateIO,

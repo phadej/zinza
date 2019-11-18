@@ -24,9 +24,11 @@ data Node a
     | NExpr (LExpr a)                        -- ^ expression @expr : String@
     | NIf   (LExpr a) (Nodes a)              -- ^ conditional block, @expr : Bool@
     | NFor  Var (LExpr a) (Nodes (Maybe a))  -- ^ for loop, @expr : List a@
+    | NComment                               -- ^ comments
   deriving (Show, Functor, Foldable, Traversable)
 
 instance TraversableWithLoc Node where
+    traverseWithLoc _ NComment   = pure NComment
     traverseWithLoc _ (NRaw s)   = pure (NRaw s)
     traverseWithLoc f (NExpr e)  = NExpr
         <$> traverse (traverseWithLoc f) e
@@ -42,6 +44,7 @@ instance TraversableWithLoc Node where
 
 -- | Substitution.
 (>>==) :: Node a -> (a -> Expr b) -> Node b
+NComment               >>== _ = NComment
 NRaw s                 >>== _ = NRaw s
 NExpr (L l expr)       >>== k = NExpr (L l (expr >>= k))
 NIf (L l expr) ns      >>== k = NIf (L l (expr >>= k)) (map (>>== k) ns)
