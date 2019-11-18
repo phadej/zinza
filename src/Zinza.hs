@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 -- |
 -- SPDX-Identifier-Id: GPL-2.0-or-later AND BSD-3-Clause
 --
@@ -23,7 +24,7 @@
 -- @
 -- newtype Licenses = Licenses { licenses :: [License] }
 --   deriving (Generic)
--- 
+--
 -- data License = License
 --     { licenseCon  :: String
 --     , licenseName :: String
@@ -37,7 +38,7 @@
 -- instance 'Zinza' Licenses where
 --     'toType'  = 'genericToType'  id
 --     'toValue' = 'genericToValue' id
--- 
+--
 -- instance 'Zinza' License where
 --     'toType'  = 'genericToTypeSFP'
 --     'toValue' = 'genericToValueSFP'
@@ -67,7 +68,7 @@
 --
 -- == Executable usage
 --
--- TBW 
+-- TBW
 --
 -- === Expressions
 --
@@ -94,6 +95,10 @@
 -- @
 -- {% if boolExpression %}
 -- ...
+-- {% elif anotherBoolExpression %}
+-- ...
+-- {% else %}
+-- ...
 -- {% endif %}
 -- @
 --
@@ -115,6 +120,7 @@ module Zinza (
     parseAndCompileModule,
     parseAndCompileModuleIO,
     ModuleConfig (..),
+    simpleConfig,
     -- * Input class
     Zinza (..),
     -- ** Generic deriving
@@ -148,13 +154,14 @@ module Zinza (
     ) where
 
 import Control.Exception (throwIO)
+import Data.Typeable     (Typeable, typeRep)
 
 import Zinza.Check
 import Zinza.Errors
 import Zinza.Expr
 import Zinza.Generic
-import Zinza.Node
 import Zinza.Module
+import Zinza.Node
 import Zinza.Parser
 import Zinza.Pos
 import Zinza.Type
@@ -200,3 +207,29 @@ parseAndCompileModuleIO :: Zinza a => ModuleConfig a ->  FilePath -> IO String
 parseAndCompileModuleIO mc name = do
     contents <- readFile name
     either throwIO return $ parseAndCompileModule mc name contents
+
+-- | Simple configuration to use with 'parseAndCompileModule' or
+-- 'parseAndCompileModuleIO'.
+simpleConfig
+    :: forall a. Typeable a
+    => String    -- ^ module name
+    -> [String]  -- ^ imports
+    -> ModuleConfig a
+simpleConfig moduleName imports = ModuleConfig
+    { mcRender = "render"
+    , mcHeader =
+        [ "module " ++ moduleName ++ " (render) where"
+        , "import Prelude (String, fst, snd, ($))"
+        , "import Control.Monad (forM_)"
+        ] ++
+        [ "import " ++ i
+        | i <- imports
+        ] ++
+        [ "type Writer a = (String, a)"
+        , "tell :: String -> Writer (); tell x = (x, ())"
+        , "execWriter :: Writer a -> String; execWriter = fst"
+        , "render :: " ++ typeName ++ " -> String"
+        ]
+    }
+  where
+    typeName = show (typeRep ([] :: [a]))

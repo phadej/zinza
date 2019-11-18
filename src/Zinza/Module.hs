@@ -104,10 +104,13 @@ checkNode (NRaw s) = tell $ "tell " ++ show s
 checkNode (NExpr expr) = do
     expr' <- lift $ checkString expr
     tell $ "tell " ++ displayHsExpr expr'
-checkNode (NIf expr nodes) = do
+checkNode (NIf expr xs ys) = do
     expr' <- lift $ checkBool expr
-    tell $ "when " ++ displayHsExpr expr' ++ " $ do"
-    indented $ checkNodes nodes
+    tell $ "if " ++ displayHsExpr expr'
+    tell "then do"
+    indented $ checkNodes xs
+    tell "else do"
+    indented $ checkNodes ys
 checkNode (NFor v expr nodes) = do
     v' <- newVar v
     (expr', ty) <- lift (checkList expr)

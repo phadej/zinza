@@ -8,6 +8,7 @@ import Zinza
 
 data Fancy = Fancy
     { fancyBoolA  :: Bool
+    , fancyBoolB  :: Bool
     , fancyString :: String
     , fancyMap    :: Map String String
     }

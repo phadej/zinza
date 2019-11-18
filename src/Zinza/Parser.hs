@@ -152,5 +152,25 @@ ifP = do
     spaces
     close' on0
     ns <- nodesP
-    close "if"
-    return $ NIf expr ns
+    closing (NIf expr ns)
+  where
+    closing mk = closeIf mk <|> elifP mk <|> elseP mk
+
+    closeIf mk = do
+        close "if"
+        return (mk [])
+
+    elseP mk = do
+        on0 <- open "else"
+        close' on0
+        ns <- nodesP
+        close "if"
+        return (mk ns)
+
+    elifP mk = do
+        on0 <- open "elif"
+        expr <- located exprP
+        spaces
+        close' on0
+        ns <- nodesP
+        closing (mk . pure . NIf expr ns)

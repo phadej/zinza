@@ -49,14 +49,15 @@ checkNodes nodes = do
 checkNode :: (Indexing v i, ThrowRuntime m) => Node (i Ty) -> Either CompileError (v Value -> m ShowS)
 checkNode NComment = return $ \_val -> return id
 checkNode (NRaw s) = return $ \_val -> return (showString s)
-checkNode (NIf expr nodes) = do
+checkNode (NIf expr xs ys) = do
     b' <- checkBool expr
-    nodes' <- checkNodes nodes
+    xs' <- checkNodes xs
+    ys' <- checkNodes ys
     return $ \ctx -> do
         b'' <- b' ctx
         if b''
-        then nodes' ctx
-        else return id
+        then xs' ctx
+        else ys' ctx
 checkNode (NExpr e) = do
     e' <- checkString e
     return $ \ctx -> do

@@ -61,16 +61,7 @@ lics = Licenses
     ]
 
 licsMC :: ModuleConfig Licenses
-licsMC = ModuleConfig
-    { mcRender = "render"
-    , mcHeader =
-        [ "module Demo (render) where"
-        , "import Control.Monad (forM_, when)"
-        , "import Control.Monad.Writer (execWriter, tell)"
-        , "import Licenses"
-        , "render :: Licenses -> String"
-        ]
-    }
+licsMC = simpleConfig "DemoLicenses" ["Licenses"]
 
 -------------------------------------------------------------------------------
 -- Fancy
@@ -79,6 +70,7 @@ licsMC = ModuleConfig
 fancy :: Fancy
 fancy = Fancy
     { fancyBoolA  = True
+    , fancyBoolB  = True
     , fancyString = "fancy string"
     , fancyMap = Map.fromList
         [ ("foo", "Foo")
@@ -87,17 +79,7 @@ fancy = Fancy
     }
 
 fancyMC :: ModuleConfig Fancy
-fancyMC = ModuleConfig
-    { mcRender = "render"
-    , mcHeader =
-        [ "module Demo (render) where"
-        , "import Control.Monad (forM_, when)"
-        , "import Control.Monad.Writer (execWriter, tell)"
-        , "import qualified Data.Map.Strict as Map"
-        , "import Fancy"
-        , "render :: Fancy -> String"
-        ]
-    }
+fancyMC = simpleConfig "DemoFancy" ["Fancy", "qualified Data.Map.Strict as Map"]
 
 -------------------------------------------------------------------------------
 -- Example
@@ -116,5 +98,3 @@ example = do
   where
     runEither (Left err) = throwIO err
     runEither (Right x)  = return x
-
-

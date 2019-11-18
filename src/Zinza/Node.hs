@@ -22,7 +22,7 @@ type Nodes a = [Node a]
 data Node a
     = NRaw  String                           -- ^ raw text block
     | NExpr (LExpr a)                        -- ^ expression @expr : String@
-    | NIf   (LExpr a) (Nodes a)              -- ^ conditional block, @expr : Bool@
+    | NIf   (LExpr a) (Nodes a) (Nodes a)   -- ^ conditional block, @expr : Bool@
     | NFor  Var (LExpr a) (Nodes (Maybe a))  -- ^ for loop, @expr : List a@
     | NComment                               -- ^ comments
   deriving (Show, Functor, Foldable, Traversable)
@@ -32,9 +32,10 @@ instance TraversableWithLoc Node where
     traverseWithLoc _ (NRaw s)   = pure (NRaw s)
     traverseWithLoc f (NExpr e)  = NExpr
         <$> traverse (traverseWithLoc f) e
-    traverseWithLoc f (NIf e ns) = NIf
+    traverseWithLoc f (NIf e xs ys) = NIf
         <$> traverse (traverseWithLoc f) e
-        <*> traverse (traverseWithLoc f) ns
+        <*> traverse (traverseWithLoc f) xs
+        <*> traverse (traverseWithLoc f) ys
     traverseWithLoc f (NFor v e ns) = NFor v
         <$> traverse (traverseWithLoc f) e
         <*> traverse (traverseWithLoc f') ns
@@ -47,5 +48,5 @@ instance TraversableWithLoc Node where
 NComment               >>== _ = NComment
 NRaw s                 >>== _ = NRaw s
 NExpr (L l expr)       >>== k = NExpr (L l (expr >>= k))
-NIf (L l expr) ns      >>== k = NIf (L l (expr >>= k)) (map (>>== k) ns)
+NIf (L l expr) xs ys   >>== k = NIf (L l (expr >>= k)) (map (>>== k) xs) (map (>>== k) ys)
 NFor var (L l expr) ns >>== k = NFor var (L l (expr >>= k)) (map (>>== traverse k) ns)
