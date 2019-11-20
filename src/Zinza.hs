@@ -193,7 +193,7 @@ import Zinza.Type
 import Zinza.Value
 import Zinza.Var
 
--- | Parse and compile the template.
+-- | Parse and compile the template into Haskell function.
 parseAndCompileTemplate
     :: (Zinza a, ThrowRuntime m)
     => FilePath  -- ^ name of the template
@@ -213,6 +213,7 @@ parseAndCompileTemplateIO name = do
     contents <- readFile name
     either throwIO return $ parseAndCompileTemplate name contents
 
+-- | Parse and compile the template into 'String' representing a Haskell module.
 parseAndCompileModule
     :: Zinza a
     => ModuleConfig a
