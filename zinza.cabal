@@ -31,6 +31,7 @@ library
     , base          ^>=4.10.0.0 || ^>=4.11.0.0 || ^>=4.12.0.0 || ^>=4.13.0.0
     , containers    ^>=0.5.10.2 || ^>=0.6.0.1
     , parsec        ^>=3.1.13.0
+    , text          ^>=1.2.3.0
     , transformers  ^>=0.5.2.0
 
   other-modules:
@@ -55,8 +56,9 @@ test-suite zinza-tests
   hs-source-dirs:   test
   main-is:          Tests.hs
   other-modules:
-    Licenses
     Fancy
+    Licenses
+
   build-depends:
     , base
     , bytestring    ^>=0.10.8.2
