@@ -9,6 +9,8 @@ import Data.Proxy    (Proxy (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Lazy      as Map
 import qualified Data.Set           as Set
+import qualified Data.Text          as T
+import qualified Data.Text.Lazy     as LT
 
 import Zinza.Type
 import Zinza.Value
@@ -98,3 +100,15 @@ instance (Zinza k, Zinza v) => Zinza (Map.Map k v) where
             ]
         | (k, v) <- Map.toList m
         ]
+
+-------------------------------------------------------------------------------
+-- text
+-------------------------------------------------------------------------------
+
+instance Zinza T.Text where
+    toType _ = TyString (Just "T.unpack")
+    toValue  = VString . T.unpack
+
+instance Zinza LT.Text where
+    toType _ = TyString (Just "LT.unpack")
+    toValue  = VString . LT.unpack
