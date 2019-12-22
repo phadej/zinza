@@ -40,10 +40,13 @@ toLoc p = Loc (sourceLine p) (sourceColumn p)
 varP :: Parser Var
 varP = (:) <$> satisfy isLower <*> many (satisfy isVarChar)
 
+locP :: Parser Loc
+locP = toLoc <$> getPosition
+
 located :: Parser a -> Parser (Located a)
 located p = do
-    pos <- getPosition
-    L (toLoc pos) <$> p
+    l <- locP
+    L l <$> p
 
 locVarP :: Parser (Located Var)
 locVarP = located varP
@@ -128,7 +131,7 @@ eatNewlineWhen False = return ()
 eatNewlineWhen True  = void (optional (char '\n'))
 
 directiveP :: Parser (Node Var)
-directiveP = forP <|> ifP
+directiveP = forP <|> ifP <|> defBlockP <|> useBlockP
 
 spaces1 :: Parser ()
 spaces1 = space *> spaces
@@ -190,3 +193,23 @@ ifP = do
         close' on0
         ns <- nodesP
         closing (mk . pure . NIf expr ns)
+
+defBlockP :: Parser (Node Var)
+defBlockP = do
+    l <- locP
+    on0 <- open "defblock"
+    var <- varP
+    spaces
+    close' on0
+    ns <- nodesP
+    close "block"
+    return (NDefBlock l var ns)
+
+useBlockP :: Parser (Node Var)
+useBlockP = do
+    l <- locP
+    on0 <- open "useblock"
+    var <- varP
+    spaces
+    close' on0
+    return (NUseBlock l var)

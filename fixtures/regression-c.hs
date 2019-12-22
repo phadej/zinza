@@ -1,5 +1,6 @@
+{-# OPTIONS_GHC -fno-warn-unused-imports #-}
 module DemoLicenses (render) where
-import Prelude (String, fst, snd, ($))
+import Prelude (String, fst, snd, ($), not, return)
 import Control.Monad (forM_)
 import Licenses
 type Writer a = (String, a)

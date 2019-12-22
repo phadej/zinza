@@ -6,6 +6,8 @@ import Control.Monad         ((>=>))
 import Data.Functor.Identity (Identity (..))
 import Data.Proxy            (Proxy (..))
 import Data.Traversable      (for)
+import Control.Monad.Trans.State (StateT (..), evalStateT, put, get)
+import Control.Monad.Trans.Class (lift)
 
 import qualified Data.Map.Strict as M
 
@@ -20,6 +22,12 @@ import Zinza.Value
 import Zinza.Var
 
 -------------------------------------------------------------------------------
+-- Type
+-------------------------------------------------------------------------------
+
+type Check v m = StateT (M.Map Var (v Value -> m ShowS)) (Either CompileError)
+
+-------------------------------------------------------------------------------
 -- Nodes
 -------------------------------------------------------------------------------
 
@@ -31,28 +39,31 @@ check nodes = case toType (Proxy :: Proxy a) of
                 Nothing -> Left (UnboundTopLevelVar loc var)
                 Just _  -> Right (EField (L loc (EVar (L loc (Identity rootTy)))) (L loc var))
 
-        run <- checkNodes (map (>>== id) nodes')
+        run <- evalStateT (checkNodes (map (>>== id) nodes')) M.empty
         return $ fmap ($ "") . run . Identity . toValue
 
     rootTy -> throwRuntime (NotRecord zeroLoc rootTy)
 
 checkNodes
     :: (Indexing v i, ThrowRuntime m)
-    => Nodes (i Ty)  -- ^ nodes with root object
-    -> Either CompileError (v Value -> m ShowS)
+    => Nodes (i Ty)                    -- ^ nodes with root object
+    -> Check v m (v Value -> m ShowS)
 checkNodes nodes = do
     nodes' <- traverse checkNode nodes
     return $ \val -> do
         ss <- traverse ($ val) nodes'
         return (foldr (.) id ss)
 
-checkNode :: (Indexing v i, ThrowRuntime m) => Node (i Ty) -> Either CompileError (v Value -> m ShowS)
+checkNode
+    :: (Indexing v i, ThrowRuntime m)
+    => Node (i Ty)
+    -> Check v m (v Value -> m ShowS)
 checkNode NComment = return $ \_val -> return id
 checkNode (NRaw s) = return $ \_val -> return (showString s)
 checkNode (NIf expr xs ys) = do
     b' <- checkBool expr
-    xs' <- checkNodes xs
-    ys' <- checkNodes ys
+    xs' <- resetingState $ checkNodes xs
+    ys' <- resetingState $ checkNodes ys
     return $ \ctx -> do
         b'' <- b' ctx
         if b''
@@ -65,17 +76,40 @@ checkNode (NExpr e) = do
         return $ showString s
 checkNode (NFor _v expr nodes) = do
     (expr', ty) <- checkList expr
-    nodes' <- checkNodes (fmap (fmap (maybe (Here ty) There)) nodes)
+    blocks <- get
+    nodes' <- lift $ evalStateT
+        (checkNodes (fmap (fmap (maybe (Here ty) There)) nodes))
+        (M.map (\f (_ ::: xs) -> f xs) blocks)
     return $ \ctx -> do
         xs <- expr' ctx
         pieces <- for xs $ \x -> nodes' (x ::: ctx)
         return $ foldr (.) id pieces
+checkNode (NDefBlock l n nodes) = do
+    blocks <- get
+    if M.member n blocks
+    then lift (Left (ShadowingBlock l n))
+    else do
+        nodes' <- checkNodes nodes
+        put $ M.insert n nodes' blocks
+    return $ \_ -> return id
+checkNode (NUseBlock l n) = do
+    blocks <- get
+    case M.lookup n blocks of
+        Nothing -> lift (Left (UnboundUseBlock l n))
+        Just block -> return block
+
+resetingState :: Monad m => StateT s m a -> StateT s m a
+resetingState m = do
+    s <- get
+    x <- m
+    put s
+    return x
 
 -------------------------------------------------------------------------------
 -- Expressions
 -------------------------------------------------------------------------------
 
-checkList :: (Indexing v i, ThrowRuntime m) => LExpr (i Ty) -> Either CompileError (v Value -> m [Value], Ty)
+checkList :: (Indexing v i, ThrowRuntime m) => LExpr (i Ty) -> Check v m (v Value -> m [Value], Ty)
 checkList e@(L l _) = do
     (e', ty) <- checkType e
     case ty of
@@ -85,7 +119,7 @@ checkList e@(L l _) = do
     go (VList xs) = return xs
     go x          = throwRuntime (NotList l (valueType x))
 
-checkBool :: (Indexing v i, ThrowRuntime m) => LExpr (i Ty) -> Either CompileError (v Value -> m Bool)
+checkBool :: (Indexing v i, ThrowRuntime m) => LExpr (i Ty) -> Check v m (v Value -> m Bool)
 checkBool e@(L l _) = do
     (e', ty) <- checkType e
     case ty of
@@ -95,7 +129,7 @@ checkBool e@(L l _) = do
     go (VBool b) = return b
     go x         = throwRuntime (NotBool l (valueType x))
 
-checkString :: (Indexing v i, ThrowRuntime m) => LExpr (i Ty) -> Either CompileError (v Value -> m String)
+checkString :: (Indexing v i, ThrowRuntime m) => LExpr (i Ty) -> Check v m (v Value -> m String)
 checkString e@(L l _) = do
     (e', ty) <- checkType e
     case ty of
@@ -105,7 +139,7 @@ checkString e@(L l _) = do
     go (VString b) = return b
     go x           = throwRuntime (NotString l (valueType x))
 
-checkType :: (Indexing v i, ThrowRuntime m) => LExpr (i Ty) -> Either CompileError (v Value -> m Value, Ty)
+checkType :: (Indexing v i, ThrowRuntime m) => LExpr (i Ty) -> Check v m (v Value -> m Value, Ty)
 checkType (L _ (EVar (L _ i))) =
     return (\v -> return (fst (index v i)), extract i)
 checkType (L _ ENot) = do

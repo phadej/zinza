@@ -22,8 +22,10 @@ type Nodes a = [Node a]
 data Node a
     = NRaw  String                           -- ^ raw text block
     | NExpr (LExpr a)                        -- ^ expression @expr : String@
-    | NIf   (LExpr a) (Nodes a) (Nodes a)   -- ^ conditional block, @expr : Bool@
+    | NIf   (LExpr a) (Nodes a) (Nodes a)    -- ^ conditional block, @expr : Bool@
     | NFor  Var (LExpr a) (Nodes (Maybe a))  -- ^ for loop, @expr : List a@
+    | NDefBlock Loc Var (Nodes a)            -- ^ define block
+    | NUseBlock Loc Var                      -- ^ use block
     | NComment                               -- ^ comments
   deriving (Show, Functor, Foldable, Traversable)
 
@@ -42,6 +44,9 @@ instance TraversableWithLoc Node where
       where
         f' _ Nothing  = pure Nothing
         f' l (Just x) = Just <$> f l x
+    traverseWithLoc f (NDefBlock l n xs) = NDefBlock l n
+        <$> traverse (traverseWithLoc f) xs
+    traverseWithLoc _ (NUseBlock l n) = pure (NUseBlock l n)
 
 -- | Substitution.
 (>>==) :: Node a -> (a -> Expr b) -> Node b
@@ -50,3 +55,5 @@ NRaw s                 >>== _ = NRaw s
 NExpr (L l expr)       >>== k = NExpr (L l (expr >>= k))
 NIf (L l expr) xs ys   >>== k = NIf (L l (expr >>= k)) (map (>>== k) xs) (map (>>== k) ys)
 NFor var (L l expr) ns >>== k = NFor var (L l (expr >>= k)) (map (>>== traverse k) ns)
+NDefBlock l n xs       >>== k = NDefBlock l n (map (>>== k) xs)
+NUseBlock l n          >>== _ = NUseBlock l n

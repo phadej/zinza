@@ -8,6 +8,7 @@ import Test.Tasty.HUnit  (testCase, (@?=))
 import qualified Data.ByteString.Lazy.Char8 as LBS8
 import qualified Data.Map.Strict            as Map
 
+import CabalInstall
 import Fancy
 import Licenses
 
@@ -28,6 +29,7 @@ main = defaultMain $ testGroup "Zinza"
         , testGolden lics licsMC "error-string"
         , testGolden lics licsMC "regression-c"
         , testGolden fancy fancyMC "fancy"
+        , testGolden cabal cabalMC "cabal-install"
         ]
     ]
   where
@@ -80,6 +82,19 @@ fancy = Fancy
 
 fancyMC :: ModuleConfig Fancy
 fancyMC = simpleConfig "DemoFancy" ["Fancy", "qualified Data.Map.Strict as Map"]
+
+-------------------------------------------------------------------------------
+-- cabal-install
+-------------------------------------------------------------------------------
+
+cabal :: CabalInstall
+cabal = CabalInstall
+    { ciLib = False
+    , ciMonolithic = False
+    }
+
+cabalMC :: ModuleConfig CabalInstall
+cabalMC = simpleConfig "DemoCabalInstall" ["CabalInstall"]
 
 -------------------------------------------------------------------------------
 -- Example

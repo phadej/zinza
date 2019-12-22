@@ -11,3 +11,12 @@ ghcid :
 
 test :
 	cabal run zinza-tests
+
+load-licenses :
+	ghci -itest fixtures/licenses.hs
+
+load-fancy :
+	ghci -itest fixtures/fancy.hs
+
+load-cabal :
+	ghci -itest fixtures/cabal-install.hs
