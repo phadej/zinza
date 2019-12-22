@@ -1,5 +1,6 @@
+{-# OPTIONS_GHC -fno-warn-unused-imports #-}
 module DemoFancy (render) where
-import Prelude (String, fst, snd, ($))
+import Prelude (String, fst, snd, ($), not, return)
 import Control.Monad (forM_)
 import Fancy
 import qualified Data.Map.Strict as Map
@@ -17,9 +18,13 @@ render z_root = execWriter $ do
       tell " -- "
       tell (snd z_var0_kv)
       tell "\n"
+    return ()
   else do
     if (not (not (fancyBoolB z_root)))
     then do
       tell "Another output\n"
+      return ()
     else do
       tell "Third branch\n"
+      return ()
+    return ()

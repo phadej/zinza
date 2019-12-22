@@ -1,10 +1,12 @@
 module Zinza.Errors where
 
-import Control.Exception (Exception (..), throwIO)
+import Control.Exception         (Exception (..), throwIO)
+import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.State (StateT (..))
 
+import Zinza.Pos
 import Zinza.Type
 import Zinza.Var
-import Zinza.Pos
 
 errorLoc :: Loc -> String -> String
 errorLoc l str = "Error at " ++ displayLoc l ++ ": " ++ str
@@ -25,12 +27,18 @@ instance Exception ParseError where
 
 data CompileError
     = UnboundTopLevelVar Loc Var
+    | ShadowingBlock Loc Var
+    | UnboundUseBlock Loc Var
     | ARuntimeError RuntimeError
   deriving (Show)
 
 instance Exception CompileError where
     displayException (UnboundTopLevelVar loc var) = errorLoc loc $
         "unbound variable '" ++ var ++ "'"
+    displayException (ShadowingBlock loc var) = errorLoc loc $
+        "redefining block '" ++ var ++ "'"
+    displayException (UnboundUseBlock loc var) = errorLoc loc $
+        "unbound block '" ++ var ++ "' used"
     displayException (ARuntimeError err) =
         displayException err
 
@@ -95,3 +103,6 @@ instance AsRuntimeError e => ThrowRuntime (Either e) where
 
 instance ThrowRuntime IO where
     throwRuntime = throwIO
+
+instance ThrowRuntime m => ThrowRuntime (StateT s m) where
+    throwRuntime = lift . throwRuntime

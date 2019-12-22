@@ -31,7 +31,8 @@ type M = StateT S (Either CompileError)
 data S = S
     { sOutput :: [(Int, String)] -> [(Int, String)]
     , sIndent :: Int
-    , sVars  :: Int
+    , sVars   :: Int
+    , sBlocks :: M.Map Var HsExpr
     }
 
 tell :: String -> M ()
@@ -84,7 +85,7 @@ checkModule mc nodes =  case toType (Proxy :: Proxy a) of
                 Nothing        -> Left (UnboundTopLevelVar loc var)
                 Just (sel, ty) -> Right (rootExpr `access` sel, ty)
 
-        ((), S out _ _) <- runStateT (header *> indented (checkNodes nodes')) (S id 0 0)
+        ((), S out _ _ _) <- runStateT (header *> indented (checkNodes nodes')) (S id 0 0 M.empty)
         return (flatten (out []))
     rootTy -> throwRuntime (NotRecord zeroLoc rootTy)
   where
@@ -108,14 +109,43 @@ checkNode (NIf expr xs ys) = do
     expr' <- lift $ checkBool expr
     tell $ "if " ++ displayHsExpr expr'
     tell "then do"
-    indented $ checkNodes xs
+    indented $ do
+        resettingBlocks $ checkNodes xs
+        tell $ "return ()"
     tell "else do"
-    indented $ checkNodes ys
+    indented $ do
+        resettingBlocks $ checkNodes ys
+        tell $ "return ()"
 checkNode (NFor v expr nodes) = do
     v' <- newVar v
     (expr', ty) <- lift (checkList expr)
     tell $ "forM_ " ++ displayHsExpr expr' ++ " $ \\" ++ v' ++ " -> do"
     indented $ checkNodes $ map (fmap (fromMaybe (hsVar v', ty))) nodes
+checkNode (NDefBlock l n nodes) = do
+    blocks <- fmap sBlocks get
+    if M.member n blocks
+    then lift (Left (UnboundUseBlock l n))
+    else do
+        v' <- fmap hsVar (newVar n)
+        tell $ "let"
+        indented $ do
+            tell $ displayHsExpr v' ++ " = do"
+            indented $ do
+                checkNodes nodes
+                tell $ "return ()"
+        modify' $ \s' -> s' { sBlocks = M.insert n v' blocks }
+checkNode (NUseBlock l n) = do
+    S _ _ _ blocks <- get
+    case M.lookup n blocks of
+        Nothing -> lift (Left (UnboundUseBlock l n))
+        Just block -> tell $ displayHsExpr block
+
+resettingBlocks :: M a -> M a
+resettingBlocks m = do
+    s <- get
+    x <- m
+    modify' $ \s' -> s' { sBlocks = sBlocks s }
+    return x
 
 -------------------------------------------------------------------------------
 -- Expression

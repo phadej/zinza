@@ -1,6 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 -- |
--- SPDX-Identifier-Id: GPL-2.0-or-later AND BSD-3-Clause
+-- License: GPL-2.0-or-later AND BSD-3-Clause
 --
 -- Zinza - a small jinja-syntax-inspired typed-template compiler.
 --
@@ -23,13 +23,13 @@
 --
 -- @
 -- newtype Licenses = Licenses { licenses :: [License] }
---   deriving (Generic)
+--   deriving ('GHC.Generics.Generic')
 --
 -- data License = License
 --     { licenseCon  :: String
 --     , licenseName :: String
 --     }
---   deriving (Generic)
+--   deriving ('GHC.Generics.Generic')
 -- @
 --
 -- We can (generically) derive 'Zinza' instances for @Licenses@ and @License@
@@ -76,8 +76,9 @@
 -- prints a Haskell module source code:
 --
 -- @
+-- {-# OPTIONS_GHC -fno-warn-unused-imports #-}
 -- module DemoLicenses (render) where
--- import Prelude (String, fst, snd, ($))
+-- import Prelude (String, fst, snd, ($), not, return)
 -- import Control.Monad (forM_)
 -- import Licenses
 -- type Writer a = (String, a)
@@ -133,6 +134,24 @@
 -- If a control structure tag starts at the first column, the possible
 -- trailing new line feed is stripped. This way full-line control tags
 -- don't introduce new lines in the output.
+--
+-- === Blocks
+--
+-- It's possible to define blocks to be used (possibly multiple times) later:
+--
+-- @
+-- {% defblock blockname %}
+-- ...
+-- {% endblock %}
+-- @
+--
+-- And the block can be used later with:
+--
+-- @
+-- {% useblock blockname %}
+-- @
+--
+-- Blocks follow scopes of @if@ and @for@ control structures
 --
 -- === Comments
 --
@@ -246,8 +265,9 @@ simpleConfig
 simpleConfig moduleName imports = ModuleConfig
     { mcRender = "render"
     , mcHeader =
-        [ "module " ++ moduleName ++ " (render) where"
-        , "import Prelude (String, fst, snd, ($))"
+        [ "{-# OPTIONS_GHC -fno-warn-unused-imports #-}"
+        , "module " ++ moduleName ++ " (render) where"
+        , "import Prelude (String, fst, snd, ($), not, return)"
         , "import Control.Monad (forM_)"
         ] ++
         [ "import " ++ i
