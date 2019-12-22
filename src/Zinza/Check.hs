@@ -142,9 +142,6 @@ checkString e@(L l _) = do
 checkType :: (Indexing v i, ThrowRuntime m) => LExpr (i Ty) -> Check v m (v Value -> m Value, Ty)
 checkType (L _ (EVar (L _ i))) =
     return (\v -> return (fst (index v i)), extract i)
-checkType (L _ ENot) = do
-    let ty = TyFun TyBool TyBool
-    return (\_ -> return $ VNot, ty)
 checkType (L eLoc (EField e (L nameLoc name))) = do
     (e', ty) <- checkType e
     case ty of
@@ -167,10 +164,8 @@ checkType (L eLoc (EApp f@(L fLoc _) x)) = do
         _            -> throwRuntime (NotFunction eLoc fTy)
   where
     go f' x' ctx = do
-        f'' <- f' ctx
-        x'' <- x' ctx
-        case f'' of
-            VNot -> case x'' of
-                VBool b -> return (VBool (not b))
-                _       -> throwRuntime (FunArgDontMatch fLoc (valueType x'') TyBool)
-            _    -> throwRuntime (NotFunction eLoc (valueType f''))
+        f2 <- f' ctx
+        x2 <- x' ctx
+        case f2 of
+            VFun f3 -> either throwRuntime return $ f3 x2
+            _    -> throwRuntime (NotFunction eLoc (valueType f2))

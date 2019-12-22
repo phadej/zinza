@@ -2,17 +2,17 @@ module Zinza.Value where
 
 import qualified Data.Map.Strict as M
 
-import Zinza.Var
+import Zinza.Errors
 import Zinza.Type
+import Zinza.Var
 
 -- | Template values.
 data Value
-    = VBool Bool                 -- ^ booleans
-    | VString String             -- ^ strings
-    | VList [Value]              -- ^ lists
-    | VRecord (M.Map Var Value)  -- ^ records
-    | VNot                       -- ^ @not@ function
-  deriving (Show)
+    = VBool Bool                                 -- ^ booleans
+    | VString String                             -- ^ strings
+    | VList [Value]                              -- ^ lists
+    | VRecord (M.Map Var Value)                  -- ^ records
+    | VFun (Value -> Either RuntimeError Value)  -- ^ function
 
 -- | Calculate 'Ty' of the 'Value'.
 -- This is only an approximation, for list we look at first
@@ -23,4 +23,4 @@ valueType (VString _)   = TyString Nothing
 valueType (VList [])    = TyList Nothing tyUnit
 valueType (VList (v:_)) = TyList Nothing (valueType v)
 valueType (VRecord m)   = TyRecord (fmap (\v -> ("", valueType v)) m)
-valueType VNot          = TyFun TyBool TyBool
+valueType (VFun _)      = TyFun tyUnit tyUnit

@@ -1,0 +1,15 @@
+Not
+===
+
+{% for b in bools %}
+not {% if b %}1{% else %}0{% endif %} = {% if not b %}1{% else %}0{% endif %}
+{% endfor %}
+
+And
+===
+
+{% for x in bools %}
+{% for y in bools %}
+and {% if x %}1{% else %}0{% endif %} {% if y %}1{% else %}0{% endif %} = {% if and x y %}1{% else %}0{% endif %}
+{% endfor %}
+{% endfor %}

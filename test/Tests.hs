@@ -1,13 +1,22 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 module Main (main) where
 
 import Control.Exception (displayException, throwIO)
 import Test.Tasty        (TestName, TestTree, defaultMain, testGroup)
 import Test.Tasty.Golden (goldenVsStringDiff)
+import Data.List.NonEmpty (NonEmpty (..))
+import Data.Set (Set)
 import Test.Tasty.HUnit  (testCase, (@?=))
+import Data.Proxy (Proxy (..))
+import Data.Typeable (Typeable, typeRep)
+import Test.Tasty.QuickCheck (testProperty)
+import Test.QuickCheck (Arbitrary, (===), Property)
+import Test.QuickCheck.Instances ()
 
 import qualified Data.ByteString.Lazy.Char8 as LBS8
 import qualified Data.Map.Strict            as Map
 
+import Bools
 import CabalInstall
 import Fancy
 import Licenses
@@ -22,6 +31,19 @@ main = defaultMain $ testGroup "Zinza"
               [ "licenseName Foo = \"foo-1.0\""
               , "licenseName Bar = \"bar-1.2\""
               ]
+    , testGroup "Roundtrip"
+        [ roundtrip (Proxy :: Proxy ())
+        , roundtrip (Proxy :: Proxy Bool)
+        , roundtrip (Proxy :: Proxy Char)
+        , roundtrip (Proxy :: Proxy String)
+        , roundtrip (Proxy :: Proxy (NonEmpty Bool))
+        , roundtrip (Proxy :: Proxy (Set String))
+        , roundtrip (Proxy :: Proxy (Map.Map String Bool))
+        -- custom types
+        , roundtrip (Proxy :: Proxy CabalInstall)
+        -- , roundtrip (Proxy :: Proxy Fancy)
+        -- , roundtrip (Proxy :: Proxy Licenses)
+        ]
     , testGroup "Golden"
         [ testGolden lics licsMC "licenses"
         , testGolden lics licsMC "error-typo"
@@ -30,6 +52,7 @@ main = defaultMain $ testGroup "Zinza"
         , testGolden lics licsMC "regression-c"
         , testGolden fancy fancyMC "fancy"
         , testGolden cabal cabalMC "cabal-install"
+        , testGolden bools boolsMC "bools"
         ]
     ]
   where
@@ -78,6 +101,7 @@ fancy = Fancy
         [ ("foo", "Foo")
         , ("bar", "Bar")
         ]
+    , fancyNot = not
     }
 
 fancyMC :: ModuleConfig Fancy
@@ -97,6 +121,20 @@ cabalMC :: ModuleConfig CabalInstall
 cabalMC = simpleConfig "DemoCabalInstall" ["CabalInstall"]
 
 -------------------------------------------------------------------------------
+-- Bools
+-------------------------------------------------------------------------------
+
+bools :: Bools
+bools = Bools
+    { boolsBools = [False, True]
+    , boolsNot   = not
+    , boolsAnd   = (&&)
+    }
+
+boolsMC :: ModuleConfig Bools
+boolsMC = simpleConfig "DemoBools" ["Bools"]
+
+-------------------------------------------------------------------------------
 -- Example
 -------------------------------------------------------------------------------
 
@@ -113,3 +151,14 @@ example = do
   where
     runEither (Left err) = throwIO err
     runEither (Right x)  = return x
+
+-------------------------------------------------------------------------------
+-- roundtrip
+-------------------------------------------------------------------------------
+
+roundtrip
+    :: forall a. (Typeable a, Zinza a, Eq a, Show a, Arbitrary a)
+    => Proxy a -> TestTree
+roundtrip p = testProperty (show (typeRep p)) prop where
+    prop :: a -> Property
+    prop x = fromValue zeroLoc (toValue x) === Right x

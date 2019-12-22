@@ -383,7 +383,8 @@ Flag lukko
   default:      True
   manual:       True
 
-{% if not lib %}
+{% if lib %}
+{% else %}
 custom-setup
    setup-depends:
        Cabal     >= 2.2,

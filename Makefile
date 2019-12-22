@@ -13,10 +13,13 @@ test :
 	cabal run zinza-tests
 
 load-licenses :
-	ghci -itest fixtures/licenses.hs
+	ghci -isrc -itest fixtures/licenses.hs
 
 load-fancy :
-	ghci -itest fixtures/fancy.hs
+	ghci -isrc -itest fixtures/fancy.hs
 
 load-cabal :
-	ghci -itest fixtures/cabal-install.hs
+	ghci -isrc -itest fixtures/cabal-install.hs
+
+load-bools :
+	ghci -isrc -itest fixtures/bools.hs

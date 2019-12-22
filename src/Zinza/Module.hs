@@ -174,7 +174,6 @@ checkBool e@(L l _) = do
 
 checkType :: LExpr (HsExpr, Ty) -> Either CompileError (HsExpr, Ty)
 checkType (L _ (EVar (L _ x))) = return x
-checkType (L _ ENot) = return (hsVar "not", TyFun TyBool TyBool)
 checkType (L eLoc (EField e (L nameLoc name))) =do
     (e', ty) <- checkType e
     case ty of
