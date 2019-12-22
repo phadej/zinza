@@ -3,9 +3,10 @@ module Zinza.Parser (parseTemplate) where
 import Control.Applicative (many, optional, some, (<|>))
 import Control.Monad       (void)
 import Data.Char           (isAlphaNum, isLower)
-import Data.Maybe          (isJust)
+import Data.List           (foldl')
 import Text.Parsec
-       (eof, getPosition, lookAhead, notFollowedBy, parse, anyChar, satisfy, try)
+       (anyChar, eof, getPosition, lookAhead, notFollowedBy, parse, satisfy,
+       try)
 import Text.Parsec.Char    (char, space, spaces, string)
 import Text.Parsec.Pos     (SourcePos, sourceColumn, sourceLine)
 import Text.Parsec.String  (Parser)
@@ -72,21 +73,39 @@ exprNodeP :: Parser (Node Var)
 exprNodeP = do
     _ <- try (string "{{")
     spaces
-    expr <- located exprP
+    expr <- exprP
     spaces
     _ <- string "}}"
     return (NExpr expr)
 
-exprP :: Parser (Expr Var)
+exprP :: Parser (LExpr Var)
 exprP = do
-    b <- optional (char '!')
-    v@(L l _) <- locVarP
+    expr <- primitiveExprP
+    exprs <- many primitiveExprP
+    return $ foldl' (\f@(L l _) x -> L l (EApp f x)) expr exprs
+
+primitiveExprP :: Parser (LExpr Var)
+primitiveExprP = parens exprP <|> located primitiveExprP'
+
+parens :: Parser a -> Parser a
+parens p = do
+    _ <- char '('
+    spaces
+    x <- p
+    _ <- char ')'
+    spaces
+    return x
+
+primitiveExprP' :: Parser (Expr Var)
+primitiveExprP' = do
+    L l v <- locVarP
+    let e0 = case v of
+            "not" -> ENot
+            _     -> EVar (L l v)
     vs <- many (char '.' *> locVarP)
-    let expr = foldl (\e f -> EField (L l e) f) (EVar v) vs
-    return $
-        if isJust b
-        then ENot (L l expr)
-        else expr
+    spaces
+    let expr = foldl (\e f -> EField (L l e) f) e0 vs
+    return expr
 
 commentP :: Parser (Node var)
 commentP = do
@@ -103,7 +122,7 @@ commentP = do
                     '}' -> NComment <$ eatNewlineWhen (sourceColumn pos == 1)
                     _   -> go pos
             _   -> go pos
-    
+
 eatNewlineWhen :: Bool -> Parser ()
 eatNewlineWhen False = return ()
 eatNewlineWhen True  = void (optional (char '\n'))
@@ -138,8 +157,7 @@ forP = do
     _ <- string "in"
     notFollowedBy $ satisfy isAlphaNum
     spaces1
-    expr <- located exprP
-    spaces1
+    expr <- exprP
     close' on0
     ns <- nodesP
     close "for"
@@ -148,8 +166,7 @@ forP = do
 ifP :: Parser (Node Var)
 ifP = do
     on0 <- open "if"
-    expr <- located exprP
-    spaces
+    expr <- exprP
     close' on0
     ns <- nodesP
     closing (NIf expr ns)
@@ -169,8 +186,7 @@ ifP = do
 
     elifP mk = do
         on0 <- open "elif"
-        expr <- located exprP
-        spaces
+        expr <- exprP
         close' on0
         ns <- nodesP
         closing (mk . pure . NIf expr ns)

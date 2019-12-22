@@ -144,9 +144,7 @@ checkBool e@(L l _) = do
 
 checkType :: LExpr (HsExpr, Ty) -> Either CompileError (HsExpr, Ty)
 checkType (L _ (EVar (L _ x))) = return x
-checkType (L _ (ENot b)) = do
-    b' <- checkBool b
-    return (b' `access` "not", TyBool)
+checkType (L _ ENot) = return (hsVar "not", TyFun TyBool TyBool)
 checkType (L eLoc (EField e (L nameLoc name))) =do
     (e', ty) <- checkType e
     case ty of
@@ -154,3 +152,11 @@ checkType (L eLoc (EField e (L nameLoc name))) =do
             Just (sel, tyf) -> return (e' `access` sel, tyf)
             Nothing         -> throwRuntime (FieldNotInRecord nameLoc name ty)
         _ -> throwRuntime (NotRecord eLoc ty)
+checkType (L eLoc (EApp f@(L fLoc _) x)) = do
+    (f', fTy) <- checkType f
+    (x', xTy) <- checkType x
+    case fTy of
+        TyFun xTy' yTy | xTy == xTy' -> do
+            return (HsApp f' x', yTy)
+        TyFun xTy' _ -> throwRuntime (FunArgDontMatch fLoc xTy xTy')
+        _            -> throwRuntime (NotFunction eLoc fTy)

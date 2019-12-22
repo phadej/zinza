@@ -11,6 +11,7 @@ data Value
     | VString String             -- ^ strings
     | VList [Value]              -- ^ lists
     | VRecord (M.Map Var Value)  -- ^ records
+    | VNot                       -- ^ @not@ function
   deriving (Show)
 
 -- | Calculate 'Ty' of the 'Value'.
@@ -22,3 +23,4 @@ valueType (VString _)   = TyString Nothing
 valueType (VList [])    = TyList Nothing tyUnit
 valueType (VList (v:_)) = TyList Nothing (valueType v)
 valueType (VRecord m)   = TyRecord (fmap (\v -> ("", valueType v)) m)
+valueType VNot          = TyFun TyBool TyBool

@@ -106,10 +106,11 @@ checkString e@(L l _) = do
     go x           = throwRuntime (NotString l (valueType x))
 
 checkType :: (Indexing v i, ThrowRuntime m) => LExpr (i Ty) -> Either CompileError (v Value -> m Value, Ty)
-checkType (L _ (EVar (L _ i))) = return (\v -> return (fst (index v i)), extract i)
-checkType (L _ (ENot b)) = do
-    b' <- checkBool b
-    return (fmap (VBool . not) . b', TyBool)
+checkType (L _ (EVar (L _ i))) =
+    return (\v -> return (fst (index v i)), extract i)
+checkType (L _ ENot) = do
+    let ty = TyFun TyBool TyBool
+    return (\_ -> return $ VNot, ty)
 checkType (L eLoc (EField e (L nameLoc name))) = do
     (e', ty) <- checkType e
     case ty of
@@ -122,3 +123,20 @@ checkType (L eLoc (EField e (L nameLoc name))) = do
         Just y  -> return y
         Nothing -> throwRuntime (FieldNotInRecord nameLoc name (valueType x))
     go x = throwRuntime (NotRecord eLoc (valueType x))
+checkType (L eLoc (EApp f@(L fLoc _) x)) = do
+    (f', fTy) <- checkType f
+    (x', xTy) <- checkType x
+    case fTy of
+        TyFun xTy' yTy | xTy == xTy' -> do
+            return (go f' x', yTy)
+        TyFun xTy' _ -> throwRuntime (FunArgDontMatch fLoc xTy xTy')
+        _            -> throwRuntime (NotFunction eLoc fTy)
+  where
+    go f' x' ctx = do
+        f'' <- f' ctx
+        x'' <- x' ctx
+        case f'' of
+            VNot -> case x'' of
+                VBool b -> return (VBool (not b))
+                _       -> throwRuntime (FunArgDontMatch fLoc (valueType x'') TyBool)
+            _    -> throwRuntime (NotFunction eLoc (valueType f''))

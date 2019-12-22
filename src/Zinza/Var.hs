@@ -1,7 +1,5 @@
 module Zinza.Var where
 
-import Data.List.NonEmpty (NonEmpty (..), cons)
-
 -- | Variable name, possibly a fieldname in the record.
 type Var = String
 
@@ -9,16 +7,32 @@ type Var = String
 type Selector = String
 
 -- | A very simple haskell expression
-newtype HsExpr = HsExpr (NonEmpty Selector)
+data HsExpr
+    = HsVar Var
+    | HsSel HsExpr Var
+    | HsApp HsExpr HsExpr
 
 hsVar :: Selector -> HsExpr
-hsVar = HsExpr . pure
+hsVar = HsVar
 
 access :: HsExpr -> Selector -> HsExpr
-access (HsExpr xs) x = HsExpr (cons x xs)
+access = HsSel
 
 accessMaybe :: HsExpr -> Maybe Selector -> HsExpr
 accessMaybe e = maybe e (access e)
 
 displayHsExpr :: HsExpr -> String
-displayHsExpr (HsExpr xs) = "(" ++ foldr1 (\a b -> a ++ " $ " ++ b) xs ++ ")"
+displayHsExpr expr0 = go 11 expr0 "" where
+    go :: Int -> HsExpr -> ShowS
+    go _ (HsVar var)
+        = showString var
+    go d (HsSel e s)
+        = showParen (d > 10)
+        $ showString s
+        . showChar ' '
+        . go 11 e
+    go d (HsApp f x)
+        = showParen (d > 10)
+        $ go 10 f
+        . showChar ' '
+        . go 11 x

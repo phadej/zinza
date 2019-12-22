@@ -102,11 +102,13 @@
 -- {{ expression }}
 -- @
 --
--- Expression syntax has only two structures
+-- Expression syntax has only few constructions:
 --
--- * negated: @!foo@
+-- * @not@ is a known function
 --
 -- * field access @foo.bar@
+--
+-- * function application @fun bar@ (though function can only be @not@)
 --
 -- === Control structures
 --

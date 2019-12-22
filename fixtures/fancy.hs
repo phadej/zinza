@@ -7,18 +7,18 @@ type Writer a = (String, a)
 tell :: String -> Writer (); tell x = (x, ())
 execWriter :: Writer a -> String; execWriter = fst
 render :: Fancy -> String
-render (z_root) = execWriter $ do
-  tell (fancyString $ z_root)
+render z_root = execWriter $ do
+  tell (fancyString z_root)
   tell "\n"
-  if (fancyBoolA $ z_root)
+  if (fancyBoolA z_root)
   then do
-    forM_ (Map.toList $ fancyMap $ z_root) $ \z_var0_kv -> do
-      tell (fst $ z_var0_kv)
+    forM_ (Map.toList (fancyMap z_root)) $ \z_var0_kv -> do
+      tell (fst z_var0_kv)
       tell " -- "
-      tell (snd $ z_var0_kv)
+      tell (snd z_var0_kv)
       tell "\n"
   else do
-    if (fancyBoolB $ z_root)
+    if (not (not (fancyBoolB z_root)))
     then do
       tell "Another output\n"
     else do
