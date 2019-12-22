@@ -5,7 +5,7 @@
 {% for kv in map %}
 {{ kv.key }} -- {{ kv.val }}
 {% endfor %}
-{% elif boolB %}
+{% elif not (not boolB) %}
 Another output
 {% else %}
 Third branch

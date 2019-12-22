@@ -27,6 +27,7 @@ data Ty
     | TyString (Maybe Selector)              -- ^ string
     | TyList (Maybe Selector) Ty             -- ^ lists
     | TyRecord (M.Map Var (Selector, Ty))    -- ^ records
+    | TyFun Ty Ty                            -- ^ functions
   deriving (Eq, Ord, Show)
 
 -- | A record without fields is a unit type. Think of zero-field tuple: @()@.
@@ -35,17 +36,19 @@ tyUnit = TyRecord M.empty
 
 -- | Pretty print 'Ty'.
 displayTy :: Ty -> String
-displayTy ty = go ty "" where
-    go :: Ty -> ShowS
-    go TyBool       = showString "Bool"
-    go (TyString _) = showString "String"
-    go (TyList _ t) = showChar '[' . go t . showChar ']'
-    go (TyRecord m) = case M.toList m of
+displayTy ty = go 0 ty "" where
+    go :: Int -> Ty -> ShowS
+    go _ TyBool       = showString "Bool"
+    go _ (TyString _) = showString "String"
+    go _ (TyList _ t) = showChar '[' . go 0 t . showChar ']'
+    go _ (TyRecord m) = case M.toList m of
         []            -> showString "{}"
         ((n,(_,t)) : nts) -> foldl
             (\acc (n',(_,t')) -> acc . showString ", " . showPair n' t')
             (showChar '{' . showPair n t)
             nts
             . showChar '}'
+    go d (TyFun a b) = showParen (d > 10) $
+        go 11 a . showString " -> " . go 10 b
 
-    showPair n t = showString n . showString ": " . go t
+    showPair n t = showString n . showString ": " . go 0 t

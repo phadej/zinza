@@ -58,6 +58,8 @@ data RuntimeError
     | NotRecord Loc Ty
     | NotList Loc Ty
     | FieldNotInRecord Loc Var Ty
+    | NotFunction Loc Ty
+    | FunArgDontMatch Loc Ty Ty
   deriving Show
 
 instance Exception RuntimeError where
@@ -71,6 +73,10 @@ instance Exception RuntimeError where
         "Not a list " ++ displayTy ty
     displayException (FieldNotInRecord loc var ty) = errorLoc loc $
         "Field '" ++ var ++ "' isn't in a record of type " ++ displayTy ty
+    displayException (NotFunction loc ty) = errorLoc loc $
+        "Not a function " ++ displayTy ty
+    displayException (FunArgDontMatch loc tyA tyB) = errorLoc loc $
+        "Function argument type don't match " ++ displayTy tyA ++ "; expected " ++ displayTy tyB
 
 -- | Class representing errors containing 'RuntimeError's.
 --
