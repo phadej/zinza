@@ -24,7 +24,6 @@ import Zinza.Pos
 data Expr a
     = EVar (Located a)                -- ^ variable
     | EField (LExpr a) (Located Var)  -- ^ field accessor
-    | ENot                            -- ^ negation function
     | EApp (LExpr a) (LExpr a)        -- ^ function application
   deriving (Show, Functor, Foldable, Traversable)
 
@@ -36,7 +35,6 @@ instance TraversableWithLoc Expr where
         <$> f l x
     traverseWithLoc f (EField (L l e) v) = (\e' -> EField (L l e') v)
         <$> traverseWithLoc f e
-    traverseWithLoc _ ENot = pure ENot
     traverseWithLoc f (EApp (L lx x) (L ly y)) =
         (\x' y' -> EApp (L lx x') (L ly y'))
         <$> traverseWithLoc f x
@@ -48,7 +46,6 @@ instance Monad Expr where
 
     EVar (L _ x)           >>= k = k x
     EField (L l expr) var  >>= k = EField (L l (expr >>= k)) var
-    ENot                   >>= _ = ENot
     EApp (L lx x) (L ly y) >>= k = EApp (L lx (x >>= k)) (L ly (y >>= k))             
 
 instance Applicative Expr where

@@ -36,12 +36,14 @@
 --
 -- @
 -- instance 'Zinza' Licenses where
---     'toType'  = 'genericToType'  id
---     'toValue' = 'genericToValue' id
+--     'toType'    = 'genericToType'    id
+--     'toValue'   = 'genericToValue'   id
+--     'fromValue' = 'genericFromValue' id
 --
 -- instance 'Zinza' License where
---     'toType'  = 'genericToTypeSFP'
---     'toValue' = 'genericToValueSFP'
+--     'toType'    = 'genericToTypeSFP'
+--     'toValue'   = 'genericToValueSFP'
+--     'fromValue' = 'genericFromValueSFP'
 -- @
 --
 -- Then the example of run-time usage is
@@ -105,11 +107,14 @@
 --
 -- Expression syntax has only few constructions:
 --
--- * @not@ is a known function
---
 -- * field access @foo.bar@
 --
 -- * function application @fun bar@ (though function can only be @not@)
+--
+-- /Note:/ you can provide your own /Prelude/ of functions. See @Bools.hs@
+-- and @Bools.zinza@ in tests for an example.
+-- You cannot define new functions in templates, but you can pass
+-- them as template arguments.
 --
 -- === Control structures
 --
@@ -172,10 +177,12 @@ module Zinza (
     -- ** Generic deriving
     genericToType,
     genericToValue,
+    genericFromValue,
     genericToTypeSFP,
     genericToValueSFP,
+    genericFromValueSFP,
     stripFieldPrefix,
-    GZinzaType, GZinzaValue, GFieldNames,
+    GZinzaType, GZinzaValue, GZinzaFrom, GFieldNames,
     -- * Templates
     Node (..), Nodes, Expr (..), LExpr,
     -- * Types
@@ -267,7 +274,7 @@ simpleConfig moduleName imports = ModuleConfig
     , mcHeader =
         [ "{-# OPTIONS_GHC -fno-warn-unused-imports #-}"
         , "module " ++ moduleName ++ " (render) where"
-        , "import Prelude (String, fst, snd, ($), not, return)"
+        , "import Prelude (String, fst, snd, ($), return)"
         , "import Control.Monad (forM_)"
         ] ++
         [ "import " ++ i

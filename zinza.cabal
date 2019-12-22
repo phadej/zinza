@@ -56,15 +56,19 @@ test-suite zinza-tests
   hs-source-dirs:   test
   main-is:          Tests.hs
   other-modules:
+    Bools
     CabalInstall
     Fancy
     Licenses
 
   build-depends:
     , base
-    , bytestring    ^>=0.10.8.2
+    , bytestring            ^>=0.10.8.2
     , containers
-    , tasty         ^>=1.2.3
-    , tasty-golden  ^>=2.3.2
-    , tasty-hunit   ^>=0.10.0.2
+    , QuickCheck            ^>=2.13.2
+    , quickcheck-instances  ^>=0.3.22
+    , tasty                 ^>=1.2.3
+    , tasty-golden          ^>=2.3.2
+    , tasty-hunit           ^>=0.10.0.2
+    , tasty-quickcheck      ^>=0.10.1
     , zinza

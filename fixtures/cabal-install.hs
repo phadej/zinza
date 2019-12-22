@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -fno-warn-unused-imports #-}
 module DemoCabalInstall (render) where
-import Prelude (String, fst, snd, ($), not, return)
+import Prelude (String, fst, snd, ($), return)
 import Control.Monad (forM_)
 import CabalInstall
 type Writer a = (String, a)
@@ -400,8 +400,10 @@ render z_root = execWriter $ do
   tell "  default:      True\n"
   tell "  manual:       True\n"
   tell "\n"
-  if (not (ciLib z_root))
+  if (ciLib z_root)
   then do
+    return ()
+  else do
     tell "custom-setup\n"
     tell "   setup-depends:\n"
     tell "       Cabal     >= 2.2,\n"
@@ -409,8 +411,6 @@ render z_root = execWriter $ do
     tell "       process   >= 1.1.0.1  && < 1.7,\n"
     tell "       filepath  >= 1.3      && < 1.5\n"
     tell "\n"
-    return ()
-  else do
     return ()
   if (ciLib z_root)
   then do

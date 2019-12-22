@@ -101,13 +101,10 @@ parens p = do
 
 primitiveExprP' :: Parser (Expr Var)
 primitiveExprP' = do
-    L l v <- locVarP
-    let e0 = case v of
-            "not" -> ENot
-            _     -> EVar (L l v)
+    v@(L l _) <- locVarP
     vs <- many (char '.' *> locVarP)
     spaces
-    let expr = foldl (\e f -> EField (L l e) f) e0 vs
+    let expr = foldl (\e f -> EField (L l e) f) (EVar v) vs
     return expr
 
 commentP :: Parser (Node var)

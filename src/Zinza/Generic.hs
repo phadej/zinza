@@ -7,21 +7,24 @@ module Zinza.Generic (
     GFieldNames, stripFieldPrefix,
     GZinzaType, genericToType, genericToTypeSFP,
     GZinzaValue, genericToValue, genericToValueSFP,
+    GZinzaFrom, genericFromValue, genericFromValueSFP,
     ) where
 
-import Data.Char    (isLower, toLower)
+import Data.Char      (isLower, toLower)
+import Data.Kind      (Type)
+import Data.List      (stripPrefix)
+import Data.Proxy     (Proxy (..))
 import Data.Semigroup (Semigroup (..))
-import Data.Kind    (Type)
-import Data.List    (stripPrefix)
-import Data.Proxy   (Proxy (..))
 import GHC.Generics
 
 import qualified Data.Map.Strict as M
 
 import Zinza.Class
+import Zinza.Errors
+import Zinza.Pos
 import Zinza.Type
 import Zinza.Value
-import Zinza.Var   (Var)
+import Zinza.Var    (Var)
 
 -- $setup
 -- >>> :set -XDeriveGeneric
@@ -186,3 +189,55 @@ class GZinzaValueLeaf f where
 
 instance (i ~ R, Zinza a) => GZinzaValueLeaf (K1 i a) where
     gtoValueLeaf (K1 a) = toValue a
+
+-------------------------------------------------------------------------------
+-- Generic fromValue
+-------------------------------------------------------------------------------
+
+genericFromValue
+    :: forall a. (Generic a, GZinzaFrom (Rep a))
+    => (String -> String) -- ^ field renamer
+    -> Loc -> Value -> Either RuntimeError a
+genericFromValue namer l v@(VRecord m) = do
+    g <- gfromValue l (valueType v) $ \n -> M.lookup (namer n) m
+    return (to g)
+genericFromValue _ l v = throwRuntime $ NotRecord l (valueType v)
+
+-- | 'genericFromValue' with 'stripFieldPrefix'.
+genericFromValueSFP
+    :: forall a. (Generic a, GZinzaFrom (Rep a), GFieldNames (Rep a))
+    => Loc -> Value -> Either RuntimeError a
+genericFromValueSFP = genericFromValue (stripFieldPrefix (Proxy :: Proxy a))
+
+class GZinzaFrom (f :: Type -> Type) where
+    gfromValue :: Loc -> Ty -> (Var -> Maybe Value) -> Either RuntimeError (f ())
+
+instance (i ~ D, GZinzaFromSum f) => GZinzaFrom (M1 i c f) where
+    gfromValue l ty = fmap M1 . gfromValueSum l ty
+
+class GZinzaFromSum (f :: Type -> Type) where
+    gfromValueSum :: Loc -> Ty -> (Var -> Maybe Value) -> Either RuntimeError (f ())
+
+instance (i ~ C, GZinzaFromProd f) => GZinzaFromSum (M1 i c f) where
+    gfromValueSum l ty = fmap M1 . gfromValueProd l ty
+
+class GZinzaFromProd (f :: Type -> Type) where
+    gfromValueProd ::  Loc -> Ty -> (Var -> Maybe Value) -> Either RuntimeError (f ())
+
+instance (GZinzaFromProd f, GZinzaFromProd g) => GZinzaFromProd (f :*: g) where
+    gfromValueProd l ty v = (:*:)
+        <$> gfromValueProd l ty v
+        <*> gfromValueProd l ty v
+
+instance (i ~ S, Selector c, GZinzaFromLeaf f) => GZinzaFromProd (M1 i c f) where
+    gfromValueProd l ty f = case f n of
+        Nothing -> throwRuntime $ FieldNotInRecord l n ty
+        Just v  -> M1 <$> gfromValueLeaf l v
+      where
+        n = selName (undefined :: M1 i c f ())
+
+class GZinzaFromLeaf f where
+    gfromValueLeaf :: Loc -> Value -> Either RuntimeError (f ())
+
+instance (i ~ R, Zinza a) => GZinzaFromLeaf (K1 i a) where
+    gfromValueLeaf l = fmap K1 . fromValue l
