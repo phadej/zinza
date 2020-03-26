@@ -1,15 +1,15 @@
-{-# LANGUAGE ScopedTypeVariables    #-}
-{-# LANGUAGE UndecidableInstances   #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE UndecidableInstances #-}
 module Zinza.Check (check) where
 
-import Control.Monad         ((>=>))
-import Data.Functor.Identity (Identity (..))
-import Data.Proxy            (Proxy (..))
-import Data.Traversable      (for)
-import Control.Monad.Trans.State (StateT (..), evalStateT, put, get)
+import Control.Monad             ((>=>))
 import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.State (StateT (..), evalStateT, get, put)
+import Data.Functor.Identity     (Identity (..))
+import Data.Proxy                (Proxy (..))
+import Data.Traversable          (for)
 
-import qualified Data.Map.Strict as M
+import qualified Data.Map.Strict as Map
 
 import Zinza.Class
 import Zinza.Errors
@@ -25,7 +25,7 @@ import Zinza.Var
 -- Type
 -------------------------------------------------------------------------------
 
-type Check v m = StateT (M.Map Var (v Value -> m ShowS)) (Either CompileError)
+type Check v m = StateT (Map.Map Var (v Value -> m ShowS)) (Either CompileError)
 
 -------------------------------------------------------------------------------
 -- Nodes
@@ -35,11 +35,11 @@ check :: forall a m. (Zinza a, ThrowRuntime m) => Nodes Var -> Either CompileErr
 check nodes = case toType (Proxy :: Proxy a) of
     rootTy@(TyRecord env) -> do
         nodes' <- flip (traverse . traverseWithLoc) nodes $ \loc var ->
-            case M.lookup var env of
+            case Map.lookup var env of
                 Nothing -> Left (UnboundTopLevelVar loc var)
                 Just _  -> Right (EField (L loc (EVar (L loc (Identity rootTy)))) (L loc var))
 
-        run <- evalStateT (checkNodes (map (>>== id) nodes')) M.empty
+        run <- evalStateT (checkNodes (map (>>== id) nodes')) Map.empty
         return $ fmap ($ "") . run . Identity . toValue
 
     rootTy -> throwRuntime (NotRecord zeroLoc rootTy)
@@ -79,22 +79,22 @@ checkNode (NFor _v expr nodes) = do
     blocks <- get
     nodes' <- lift $ evalStateT
         (checkNodes (fmap (fmap (maybe (Here ty) There)) nodes))
-        (M.map (\f (_ ::: xs) -> f xs) blocks)
+        (Map.map (\f (_ ::: xs) -> f xs) blocks)
     return $ \ctx -> do
         xs <- expr' ctx
         pieces <- for xs $ \x -> nodes' (x ::: ctx)
         return $ foldr (.) id pieces
 checkNode (NDefBlock l n nodes) = do
     blocks <- get
-    if M.member n blocks
+    if Map.member n blocks
     then lift (Left (ShadowingBlock l n))
     else do
         nodes' <- checkNodes nodes
-        put $ M.insert n nodes' blocks
+        put $ Map.insert n nodes' blocks
     return $ \_ -> return id
 checkNode (NUseBlock l n) = do
     blocks <- get
-    case M.lookup n blocks of
+    case Map.lookup n blocks of
         Nothing -> lift (Left (UnboundUseBlock l n))
         Just block -> return block
 
@@ -145,12 +145,12 @@ checkType (L _ (EVar (L _ i))) =
 checkType (L eLoc (EField e (L nameLoc name))) = do
     (e', ty) <- checkType e
     case ty of
-        TyRecord tym -> case M.lookup name tym of
+        TyRecord tym -> case Map.lookup name tym of
             Just (_sel, tyf) -> return (e' >=> go, tyf)
             Nothing          -> throwRuntime (FieldNotInRecord nameLoc name ty)
         _ -> throwRuntime (NotRecord eLoc ty)
   where
-    go x@(VRecord r) = case M.lookup name r of
+    go x@(VRecord r) = case Map.lookup name r of
         Just y  -> return y
         Nothing -> throwRuntime (FieldNotInRecord nameLoc name (valueType x))
     go x = throwRuntime (NotRecord eLoc (valueType x))

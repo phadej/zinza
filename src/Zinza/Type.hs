@@ -4,7 +4,7 @@ module Zinza.Type (
     displayTy,
     ) where
 
-import qualified Data.Map as M
+import qualified Data.Map as Map
 
 import Zinza.Var
 
@@ -26,13 +26,13 @@ data Ty
     = TyBool                                 -- ^ boolean
     | TyString (Maybe Selector)              -- ^ string
     | TyList (Maybe Selector) Ty             -- ^ lists
-    | TyRecord (M.Map Var (Selector, Ty))    -- ^ records
+    | TyRecord (Map.Map Var (Selector, Ty))    -- ^ records
     | TyFun Ty Ty                            -- ^ functions
   deriving (Eq, Ord, Show)
 
 -- | A record without fields is a unit type. Think of zero-field tuple: @()@.
 tyUnit :: Ty
-tyUnit = TyRecord M.empty
+tyUnit = TyRecord Map.empty
 
 -- | Pretty print 'Ty'.
 displayTy :: Ty -> String
@@ -41,7 +41,7 @@ displayTy ty = go 0 ty "" where
     go _ TyBool       = showString "Bool"
     go _ (TyString _) = showString "String"
     go _ (TyList _ t) = showChar '[' . go 0 t . showChar ']'
-    go _ (TyRecord m) = case M.toList m of
+    go _ (TyRecord m) = case Map.toList m of
         []            -> showString "{}"
         ((n,(_,t)) : nts) -> foldl
             (\acc (n',(_,t')) -> acc . showString ", " . showPair n' t')
