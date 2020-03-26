@@ -12,7 +12,7 @@ import Data.Foldable             (traverse_)
 import Data.Maybe                (fromMaybe)
 import Data.Proxy                (Proxy (..))
 
-import qualified Data.Map.Strict as M
+import qualified Data.Map.Strict as Map
 
 import Zinza.Class
 import Zinza.Errors
@@ -32,7 +32,7 @@ data S = S
     { sOutput :: [(Int, String)] -> [(Int, String)]
     , sIndent :: Int
     , sVars   :: Int
-    , sBlocks :: M.Map Var HsExpr
+    , sBlocks :: Map.Map Var HsExpr
     }
 
 tell :: String -> M ()
@@ -81,11 +81,11 @@ checkModule
 checkModule mc nodes =  case toType (Proxy :: Proxy a) of
     TyRecord env -> do
         nodes' <- flip (traverse .traverseWithLoc) nodes $ \loc var ->
-            case M.lookup var env of
+            case Map.lookup var env of
                 Nothing        -> Left (UnboundTopLevelVar loc var)
                 Just (sel, ty) -> Right (rootExpr `access` sel, ty)
 
-        ((), S out _ _ _) <- runStateT (header *> indented (checkNodes nodes')) (S id 0 0 M.empty)
+        ((), S out _ _ _) <- runStateT (header *> indented (checkNodes nodes')) (S id 0 0 Map.empty)
         return (flatten (out []))
     rootTy -> throwRuntime (NotRecord zeroLoc rootTy)
   where
@@ -111,11 +111,11 @@ checkNode (NIf expr xs ys) = do
     tell "then do"
     indented $ do
         resettingBlocks $ checkNodes xs
-        tell $ "return ()"
+        tell "return ()"
     tell "else do"
     indented $ do
         resettingBlocks $ checkNodes ys
-        tell $ "return ()"
+        tell "return ()"
 checkNode (NFor v expr nodes) = do
     v' <- newVar v
     (expr', ty) <- lift (checkList expr)
@@ -123,20 +123,20 @@ checkNode (NFor v expr nodes) = do
     indented $ checkNodes $ map (fmap (fromMaybe (hsVar v', ty))) nodes
 checkNode (NDefBlock l n nodes) = do
     blocks <- fmap sBlocks get
-    if M.member n blocks
+    if Map.member n blocks
     then lift (Left (UnboundUseBlock l n))
     else do
         v' <- fmap hsVar (newVar n)
-        tell $ "let"
+        tell "let"
         indented $ do
             tell $ displayHsExpr v' ++ " = do"
             indented $ do
                 checkNodes nodes
-                tell $ "return ()"
-        modify' $ \s' -> s' { sBlocks = M.insert n v' blocks }
+                tell "return ()"
+        modify' $ \s' -> s' { sBlocks = Map.insert n v' blocks }
 checkNode (NUseBlock l n) = do
     S _ _ _ blocks <- get
-    case M.lookup n blocks of
+    case Map.lookup n blocks of
         Nothing -> lift (Left (UnboundUseBlock l n))
         Just block -> tell $ displayHsExpr block
 
@@ -177,7 +177,7 @@ checkType (L _ (EVar (L _ x))) = return x
 checkType (L eLoc (EField e (L nameLoc name))) =do
     (e', ty) <- checkType e
     case ty of
-        TyRecord tym -> case M.lookup name tym of
+        TyRecord tym -> case Map.lookup name tym of
             Just (sel, tyf) -> return (e' `access` sel, tyf)
             Nothing         -> throwRuntime (FieldNotInRecord nameLoc name ty)
         _ -> throwRuntime (NotRecord eLoc ty)

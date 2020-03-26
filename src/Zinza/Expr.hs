@@ -11,8 +11,8 @@ module Zinza.Expr (
 import Control.Monad (ap)
 import Data.Maybe    (fromMaybe)
 
-import Zinza.Var
 import Zinza.Pos
+import Zinza.Var
 
 -------------------------------------------------------------------------------
 -- Node syntax
@@ -46,7 +46,7 @@ instance Monad Expr where
 
     EVar (L _ x)           >>= k = k x
     EField (L l expr) var  >>= k = EField (L l (expr >>= k)) var
-    EApp (L lx x) (L ly y) >>= k = EApp (L lx (x >>= k)) (L ly (y >>= k))             
+    EApp (L lx x) (L ly y) >>= k = EApp (L lx (x >>= k)) (L ly (y >>= k))
 
 instance Applicative Expr where
     pure = return

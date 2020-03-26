@@ -14,8 +14,8 @@ import qualified Data.Text          as T
 import qualified Data.Text.Lazy     as LT
 
 import Zinza.Errors
-import Zinza.Type
 import Zinza.Pos
+import Zinza.Type
 import Zinza.Value
 --
 -- $setup
@@ -109,7 +109,7 @@ instance (Zinza a, Zinza b) => Zinza (a, b) where
 instance (Zinza a, Zinza b) => Zinza (a -> b) where
     toType _ = TyFun (toType (Proxy :: Proxy a)) (toType (Proxy :: Proxy b))
     toValue f = VFun $ fmap (toValue . f) . fromValue zeroLoc
-    fromValue l (VFun f) = return $ 
+    fromValue l (VFun f) = return $
         either throw id . (>>= fromValue l) . f . toValue
     fromValue l v = throwRuntime $ NotFunction l (valueType v)
 

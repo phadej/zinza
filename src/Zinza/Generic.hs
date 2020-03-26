@@ -17,7 +17,7 @@ import Data.Proxy     (Proxy (..))
 import Data.Semigroup (Semigroup (..))
 import GHC.Generics
 
-import qualified Data.Map.Strict as M
+import qualified Data.Map.Strict as Map
 
 import Zinza.Class
 import Zinza.Errors
@@ -105,7 +105,7 @@ genericToType
     :: forall a. (Generic a, GZinzaType (Rep a))
     => (String -> String)  -- ^ field renamer
     -> Proxy a -> Ty
-genericToType namer _ = TyRecord $ M.fromList
+genericToType namer _ = TyRecord $ Map.fromList
     [ (namer fn, (fn, ty))
     | (fn, ty) <- gtoType (Proxy :: Proxy (Rep a))
     ]
@@ -152,7 +152,7 @@ genericToValue
     :: forall a. (Generic a, GZinzaValue (Rep a))
     => (String -> String)  -- ^ field renamer
     -> a -> Value
-genericToValue namer x = VRecord $ M.fromList
+genericToValue namer x = VRecord $ Map.fromList
     [ (namer fn, e)
     | (fn, e) <- gtoValue (from x)
     ]
@@ -199,7 +199,7 @@ genericFromValue
     => (String -> String) -- ^ field renamer
     -> Loc -> Value -> Either RuntimeError a
 genericFromValue namer l v@(VRecord m) = do
-    g <- gfromValue l (valueType v) $ \n -> M.lookup (namer n) m
+    g <- gfromValue l (valueType v) $ \n -> Map.lookup (namer n) m
     return (to g)
 genericFromValue _ l v = throwRuntime $ NotRecord l (valueType v)
 

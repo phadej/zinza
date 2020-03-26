@@ -1,6 +1,6 @@
 module Zinza.Value where
 
-import qualified Data.Map.Strict as M
+import qualified Data.Map.Strict as Map
 
 import Zinza.Errors
 import Zinza.Type
@@ -11,7 +11,7 @@ data Value
     = VBool Bool                                 -- ^ booleans
     | VString String                             -- ^ strings
     | VList [Value]                              -- ^ lists
-    | VRecord (M.Map Var Value)                  -- ^ records
+    | VRecord (Map.Map Var Value)                  -- ^ records
     | VFun (Value -> Either RuntimeError Value)  -- ^ function
 
 -- | Calculate 'Ty' of the 'Value'.

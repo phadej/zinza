@@ -8,8 +8,8 @@ module Zinza.Node (
     ) where
 
 import Zinza.Expr
-import Zinza.Var
 import Zinza.Pos
+import Zinza.Var
 
 -- | A list of 'Node's.
 type Nodes a = [Node a]
