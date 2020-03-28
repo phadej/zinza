@@ -67,7 +67,7 @@ test-suite zinza-tests
     , base
     , bytestring            ^>=0.10.8.2
     , containers
-    , QuickCheck            ^>=2.13.2
+    , QuickCheck            ^>=2.13.2 || ^>=2.14
     , quickcheck-instances  ^>=0.3.22
     , tasty                 ^>=1.2.3
     , tasty-golden          ^>=2.3.2
