@@ -16,6 +16,7 @@ homepage:           https://github.com/phadej/zinza
 bug-reports:        https://github.com/phadej/zinza/issues
 tested-with:        GHC ==8.2.2 || ==8.4.4 || ==8.6.5 || ==8.8.4 || ==8.10.4 || ==9.0.1
 extra-source-files:
+  README.md
   Changelog.md
   fixtures/*.zinza
   fixtures/*.hs
