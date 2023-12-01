@@ -24,26 +24,14 @@
 -- @
 -- newtype Licenses = Licenses { licenses :: [License] }
 --   deriving ('GHC.Generics.Generic')
+--   deriving 'Zinza' via ('DerivingZinzaGenerically' Licenses)
 --
 -- data License = License
 --     { licenseCon  :: String
 --     , licenseName :: String
 --     }
 --   deriving ('GHC.Generics.Generic')
--- @
---
--- We can (generically) derive 'Zinza' instances for @Licenses@ and @License@
---
--- @
--- instance 'Zinza' Licenses where
---     'toType'    = 'genericToType'    id
---     'toValue'   = 'genericToValue'   id
---     'fromValue' = 'genericFromValue' id
---
--- instance 'Zinza' License where
---     'toType'    = 'genericToTypeSFP'
---     'toValue'   = 'genericToValueSFP'
---     'fromValue' = 'genericFromValueSFP'
+--   deriving 'Zinza' via ('DerivingZinzaGenerically' License)
 -- @
 --
 -- Then the example of run-time usage is
@@ -183,6 +171,7 @@ module Zinza (
     genericFromValueSFP,
     stripFieldPrefix,
     GZinzaType, GZinzaValue, GZinzaFrom, GFieldNames,
+    DerivingZinzaGenerically (..), DerivingZinzaGenericallyStripFieldsPrefix (..),
     -- * Templates
     Node (..), Nodes, Expr (..), LExpr,
     -- * Types

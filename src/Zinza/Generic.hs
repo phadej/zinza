@@ -1,9 +1,12 @@
-{-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeFamilies        #-}
-{-# LANGUAGE TypeOperators       #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE TypeApplications     #-}
+{-# LANGUAGE TypeFamilies         #-}
+{-# LANGUAGE TypeOperators        #-}
+{-# LANGUAGE UndecidableInstances #-}
 module Zinza.Generic (
     Zinza (..),
+    DerivingZinzaGenerically (..), DerivingZinzaGenericallyStripFieldsPrefix (..),
     GFieldNames, stripFieldPrefix,
     GZinzaType, genericToType, genericToTypeSFP,
     GZinzaValue, genericToValue, genericToValueSFP,
@@ -29,6 +32,82 @@ import Zinza.Var    (Var)
 -- $setup
 -- >>> :set -XDeriveGeneric
 -- >>> import Data.Proxy (Proxy (..))
+
+-------------------------------------------------------------------------------
+-- Generic deriving
+-------------------------------------------------------------------------------
+
+-- | Generically derive 'Zinza' without alteration (in conjuction with 'DerivingVia')
+--
+-- @
+-- data R = R
+--     { field0  :: String
+--     , field1 :: String
+--     }
+--   deriving ('GHC.Generics.Generic')
+--   deriving 'Zinza' via ('DerivingZinzaGenerically' R)
+-- @
+--
+-- is equivalent to:
+--
+-- @
+-- data R = R
+--     { field0  :: String
+--     , field1 :: String
+--     }
+--   deriving ('GHC.Generics.Generic')
+--
+-- instance 'Zinza' R where
+--     'toType'    = 'genericToType'    id
+--     'toValue'   = 'genericToValue'   id
+--     'fromValue' = 'genericFromValue' id
+-- @
+
+newtype DerivingZinzaGenerically a = DerivingZinzaGenerically {getDerivingZinzaGenerically :: a}
+
+instance
+  (Generic a, GZinzaType (Rep a), GZinzaValue (Rep a), GZinzaFrom (Rep a)) =>
+  Zinza (DerivingZinzaGenerically a)
+  where
+  toType _ = genericToType id $ Proxy @a
+  toValue = genericToValue id . getDerivingZinzaGenerically
+  fromValue loc value = DerivingZinzaGenerically <$> genericFromValue id loc value
+
+-- | Generically derive 'Zinza' without alteration (in conjuction with 'DerivingVia')
+--
+-- @
+-- data Rec = Rec
+--     { recField0  :: String
+--     , recField1 :: String
+--     }
+--   deriving ('GHC.Generics.Generic')
+--   deriving 'Zinza' via ('DerivingZinzaGenericallyStripFieldsPrefix' Rec)
+-- @
+--
+-- is equivalent to:
+--
+-- @
+-- data Rec = Rec
+--     { recField0  :: String
+--     , recField1 :: String
+--     }
+--   deriving ('GHC.Generics.Generic')
+--
+-- instance 'Zinza' Rec where
+--     'toType'    = 'genericToTypeSFP'
+--     'toValue'   = 'genericToValueSFP'
+--     'fromValue' = 'genericFromValueSFP'
+-- @
+
+newtype DerivingZinzaGenericallyStripFieldsPrefix a = DerivingZinzaGenericallyStripFieldsPrefix {getDerivingZinzaGenericallyStripFieldsPrefix :: a}
+
+instance
+  (Generic a, GZinzaType (Rep a), GZinzaValue (Rep a), GZinzaFrom (Rep a), GFieldNames (Rep a)) =>
+  Zinza (DerivingZinzaGenericallyStripFieldsPrefix a)
+  where
+  toType _ = genericToTypeSFP $ Proxy @a
+  toValue = genericToValueSFP . getDerivingZinzaGenericallyStripFieldsPrefix
+  fromValue loc value = DerivingZinzaGenericallyStripFieldsPrefix <$> genericFromValueSFP loc value
 
 -------------------------------------------------------------------------------
 -- Field renamer
