@@ -61,6 +61,14 @@ library
     Zinza.Var
     Zinza.Writer
 
+library zinza2
+  default-language: Haskell2010
+  hs-source-dirs:   src2
+  exposed-modules:  Zinza
+  build-depends:
+    , base
+    , containers
+
 test-suite zinza-tests
   default-language: Haskell2010
   type:             exitcode-stdio-1.0

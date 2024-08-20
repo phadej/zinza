@@ -26,7 +26,7 @@ data Ty
     = TyBool                                 -- ^ boolean
     | TyString (Maybe Selector)              -- ^ string
     | TyList (Maybe Selector) Ty             -- ^ lists
-    | TyRecord (Map.Map Var (Selector, Ty))    -- ^ records
+    | TyRecord (Map.Map Var (Selector, Ty))  -- ^ records
     | TyFun Ty Ty                            -- ^ functions
   deriving (Eq, Ord, Show)
 
