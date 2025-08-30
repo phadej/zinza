@@ -83,5 +83,5 @@ test-suite zinza-tests
     , tasty                 ^>=1.5
     , tasty-golden          ^>=2.3.2
     , tasty-hunit           ^>=0.10.0.2
-    , tasty-quickcheck      ^>=0.10.1
+    , tasty-quickcheck      ^>=0.10.1 || ^>=0.11
     , zinza
